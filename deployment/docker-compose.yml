@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -33,7 +33,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3100
-      TRUST_PROXY: "true"
+      TRUST_PROXY: 'true'
       DATABASE_URL: ${DATABASE_URL}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -64,14 +64,16 @@ services:
     volumes:
       - store_snapshots:/app/data
       - platform_backups:/app/backups
+    ports:
+      - '127.0.0.1:${API_HOST_PORT:-3201}:3100'
     expose:
-      - "3100"
+      - '3100'
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://127.0.0.1:3100/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
@@ -92,10 +94,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    ports:
+      - '127.0.0.1:${WEB_HOST_PORT:-3200}:80'
     expose:
-      - "80"
+      - '80'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/healthz']
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -107,6 +111,8 @@ services:
 
   caddy:
     image: caddy:2-alpine
+    profiles:
+      - direct-https
     restart: unless-stopped
     depends_on:
       api:
@@ -117,9 +123,9 @@ services:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

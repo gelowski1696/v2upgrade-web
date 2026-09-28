@@ -488,11 +488,13 @@ error details. The web view is read-only and supports date, event-type, store, a
 - [ ] Build and start the stack on Ubuntu, then verify the public web and health endpoints.
 - [ ] Run and archive the first coordinated backup and restore drill.
 
-**Implementation note:** Caddy is the only public service and routes `/api/*` to NestJS while
-serving the Angular application for all other paths. PostgreSQL metadata, synchronized SQLite
-snapshots, coordinated backups, and Caddy certificate state use separate named volumes. The API
-trusts exactly one proxy hop in this deployment so authentication throttles and audit metadata see
-the client address supplied by Caddy. Deployment files and the VPS runbook are in `deployment/`.
+**Implementation note:** The default Compose mode binds the web and API containers to loopback-only
+host ports 3200 and 3201 so they can coexist with the VPS's existing applications and reverse
+proxy. The bundled Caddy service is isolated behind the optional `direct-https` profile for servers
+without an existing proxy. PostgreSQL metadata, synchronized SQLite snapshots, coordinated backups,
+and Caddy certificate state use separate named volumes. The API trusts exactly one proxy hop so
+authentication throttles and audit metadata see the client address supplied by the active reverse
+proxy. Deployment files and the VPS runbook are in `deployment/`.
 
 ## Recommended Implementation Order
 

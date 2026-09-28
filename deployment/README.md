@@ -1,10 +1,14 @@
 # POSv2 Owner Dashboard — Ubuntu VPS Deployment
 
-This stack deploys the owner dashboard and API behind one HTTPS domain:
+This stack deploys the owner dashboard and API behind one HTTPS domain. Its default mode is safe
+for a VPS that already has an Nginx or Caddy reverse proxy:
 
-- Caddy terminates HTTPS and renews the certificate automatically.
+- The web container binds only to `127.0.0.1:3200`.
+- The API container binds only to `127.0.0.1:3201`.
+- The existing host reverse proxy terminates HTTPS and routes the domain to those ports.
+- The bundled Caddy service is available only through the optional `direct-https` profile.
 - Nginx serves the compiled Angular application.
-- NestJS serves `/api/v1` without publishing its container port to the internet.
+- NestJS serves `/api/v1` without publishing its container port on a public interface.
 - PostgreSQL stores platform metadata without publishing its database port.
 - Docker volumes persist PostgreSQL data, synchronized store snapshots, platform backups, and
   Caddy certificates.
@@ -15,8 +19,8 @@ Create an `A` record for the deployment domain pointing to the VPS public IPv4 a
 `AAAA` record only when IPv6 is configured and reaches this VPS. Allow inbound TCP ports 22, 80,
 and 443, plus UDP 443 for HTTP/3, in the provider firewall. Do not publish PostgreSQL port 5432.
 
-Caddy can obtain a public certificate only after the domain resolves to this VPS and ports 80 and
-443 are reachable.
+The existing reverse proxy can obtain a public certificate only after the domain resolves to this
+VPS and ports 80 and 443 are reachable.
 
 Install Docker Engine and the Compose plugin using Docker's official Ubuntu instructions:
 
@@ -78,6 +82,7 @@ Required changes:
    `DATABASE_URL`.
 4. Replace all four JWT placeholders with different generated values.
 5. Leave scheduled reports disabled until Resend is configured.
+6. Keep `WEB_HOST_PORT=3200` and `API_HOST_PORT=3201` unless either port is already occupied.
 
 Do not commit or share `ownerdashboard-posv2/deployment/.env`.
 
@@ -104,12 +109,67 @@ migrations are applied during deployment.
 Watch first-start logs:
 
 ```bash
-sudo docker compose logs -f --tail=100 postgres api web caddy
+sudo docker compose logs -f --tail=100 postgres api web
 ```
 
 Press `Ctrl+C` to stop following logs; the containers continue running.
 
-## 5. Verify The Deployment
+## 5. Connect The Existing Reverse Proxy
+
+Confirm the new loopback ports work before changing the public proxy:
+
+```bash
+curl --fail --show-error http://127.0.0.1:3201/api/v1/health
+curl --head http://127.0.0.1:3200/
+```
+
+For host Nginx, route the dashboard domain with the following locations inside its HTTPS server
+block:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:3201;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 512m;
+    proxy_read_timeout 600s;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:3200;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+For host Caddy:
+
+```caddyfile
+YOUR_DOMAIN {
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3201
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:3200
+    }
+}
+```
+
+If this VPS has no existing reverse proxy and ports 80/443 are free, start the bundled Caddy
+instead:
+
+```bash
+sudo docker compose --profile direct-https up -d
+```
+
+## 6. Verify The Deployment
 
 ```bash
 curl --fail --show-error "https://YOUR_DOMAIN/api/v1/health"
@@ -120,7 +180,7 @@ sudo docker compose ps
 Then open `https://YOUR_DOMAIN` in a browser. The production web application uses same-origin
 `/api/v1`; no browser-side API hostname needs to be configured.
 
-## 6. Create The Initial API Administrator
+## 7. Create The Initial API Administrator
 
 Use a password of at least 12 characters and quote values containing spaces:
 
@@ -131,7 +191,7 @@ sudo docker compose exec api npm run admin:create -- \
 
 Portal owner accounts are still issued through the normal client/device invitation workflow.
 
-## 7. Configure Resend Later
+## 8. Configure Resend Later
 
 After the sending domain is verified in Resend, set these values in
 `ownerdashboard-posv2/deployment/.env`:
@@ -155,7 +215,7 @@ Apply the change:
 sudo docker compose up -d --force-recreate api
 ```
 
-## 8. Schedule Coordinated Backups
+## 9. Schedule Coordinated Backups
 
 The named volumes protect data across container replacement, but they are not an off-server
 backup. The API image includes PostgreSQL tools and the existing coordinated backup scripts.
@@ -183,7 +243,7 @@ Example schedule:
 Copy the contents of the `posv2_platform_backups` volume to encrypted off-server storage on a
 separate schedule.
 
-## 9. Update The Deployment
+## 10. Update The Deployment
 
 Pull both repositories before rebuilding so API and web updates remain coordinated:
 
@@ -205,10 +265,10 @@ curl --fail --show-error "https://YOUR_DOMAIN/api/v1/health"
 
 ```bash
 # Recent logs
-sudo docker compose logs --tail=200 api web caddy
+sudo docker compose logs --tail=200 api web
 
 # Restart application containers
-sudo docker compose restart api web caddy
+sudo docker compose restart api web
 
 # Show container and health state
 sudo docker compose ps
