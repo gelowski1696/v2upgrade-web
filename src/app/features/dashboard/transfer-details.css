@@ -1,0 +1,326 @@
+.transfer-detail-dialog {
+  width: min(1040px, calc(100vw - 32px));
+}
+
+.transfer-detail-body {
+  gap: 20px;
+}
+
+.transfer-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.transfer-facts div:nth-child(5) {
+  border-left: 1px solid var(--line-soft);
+}
+
+.transfer-unit,
+.payment-kind {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border: 1px solid #cfbe9f;
+  border-radius: 999px;
+  background: #fff7e6;
+  padding: 2px 8px;
+  color: #725517;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.transfer-unit[data-unit='EMPTY'] {
+  border-color: #c9c2b8;
+  background: #f5f2ed;
+  color: #625b51;
+}
+
+.transfer-split-tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.transfer-line-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dfd4c4;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.transfer-line-panel > header {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e6dccd;
+  padding: 10px 14px;
+  background: #fbf6eb;
+}
+
+.transfer-line-panel.empty-panel > header {
+  background: #f5f3ef;
+}
+
+.transfer-line-panel > header > div,
+.transfer-line-panel > header > div > span:last-child {
+  display: flex;
+  align-items: center;
+}
+
+.transfer-line-panel > header > div {
+  min-width: 0;
+  gap: 10px;
+}
+
+.transfer-line-panel > header > div > span:last-child {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.transfer-panel-mark {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: #b57a0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.empty-panel .transfer-panel-mark {
+  background: #70685e;
+}
+
+.transfer-line-panel header strong {
+  color: var(--ink-strong);
+  font-size: 12px;
+}
+
+.transfer-line-panel header small {
+  color: #81776a;
+  font-size: 9px;
+}
+
+.transfer-line-panel header b {
+  color: #4e4438;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.transfer-line-scroll {
+  overflow-x: auto;
+}
+
+.transfer-line-scroll table {
+  width: 100%;
+  min-width: 430px;
+  border-collapse: collapse;
+}
+
+.transfer-line-scroll th,
+.transfer-line-scroll td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 10px 12px;
+  font-size: 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.transfer-line-scroll th {
+  background: #faf8f4;
+  color: #756b5e;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.transfer-line-scroll td:first-child {
+  width: 100%;
+  white-space: normal;
+}
+
+.transfer-line-scroll td strong,
+.transfer-line-scroll td small {
+  display: block;
+}
+
+.transfer-line-scroll td small {
+  margin-top: 3px;
+  color: #81776a;
+  font-size: 9px;
+}
+
+.transfer-line-scroll .number {
+  text-align: right;
+}
+
+.transfer-line-scroll tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.transfer-panel-empty {
+  min-height: 72px;
+  margin: 0;
+  padding: 25px 16px;
+  color: #81776a;
+  font-size: 10px;
+  text-align: center;
+}
+
+.transfer-detail-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 18px;
+}
+
+.transfer-notes,
+.transfer-payment-summary,
+.transfer-payments {
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.transfer-notes {
+  padding: 18px;
+}
+
+.transfer-timestamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  margin: 18px 0 0;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 14px;
+}
+
+.transfer-timestamps div {
+  display: grid;
+  gap: 4px;
+}
+
+.transfer-timestamps dt,
+.transfer-payment-summary dt {
+  color: #766c60;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.transfer-timestamps dd,
+.transfer-payment-summary dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.transfer-payment-summary dl {
+  margin: 0;
+}
+
+.transfer-payment-summary dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+}
+
+.transfer-payment-summary dl div + div {
+  border-top: 1px solid var(--line-soft);
+}
+
+.transfer-payment-summary dd {
+  text-align: right;
+}
+
+.transfer-payment-summary .transfer-balance {
+  background: #fbf5e8;
+}
+
+.transfer-payment-summary .transfer-balance dd {
+  color: #76520d;
+  font-size: 14px;
+}
+
+.transfer-payments > header {
+  padding: 16px 18px;
+}
+
+.transfer-payments h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.transfer-payments header p {
+  margin: 4px 0 0;
+  color: #81776a;
+  font-size: 10px;
+}
+
+.transfer-payments .sale-items-scroll {
+  border-width: 1px 0 0;
+  border-radius: 0;
+}
+
+.payment-kind[data-kind='REFUND'],
+.refund-amount {
+  color: #9a3f31;
+}
+
+.payment-kind[data-kind='REFUND'] {
+  border-color: #ddbbb4;
+  background: #fff3f0;
+}
+
+@media (max-width: 760px) {
+  .transfer-detail-dialog {
+    width: 100%;
+  }
+
+  .transfer-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .transfer-facts div:nth-child(4),
+  .transfer-facts div:nth-child(5) {
+    border-left: 0;
+  }
+
+  .transfer-facts div:nth-child(even) {
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .transfer-detail-lower {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .transfer-split-tables {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .transfer-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .transfer-facts div:nth-child(even) {
+    border-left: 0;
+  }
+}

@@ -1,0 +1,313 @@
+.scheduled-reports {
+  display: grid;
+  gap: 22px;
+  border-top: 1px solid #ddd1c0;
+  padding-top: 22px;
+}
+
+.schedule-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.schedule-intro p,
+.delivery-history header p {
+  margin: 0 0 4px;
+  color: #9a6a19;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.schedule-intro h2,
+.delivery-history h3 {
+  margin: 0;
+  color: #282119;
+}
+
+.schedule-intro h2 {
+  font-size: 23px;
+}
+
+.schedule-intro > div > span,
+.email-verification div span,
+.schedule-row > div span {
+  display: block;
+  margin-top: 5px;
+  color: #766d62;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.recipient-status {
+  min-width: 240px;
+  border-left: 3px solid #b35c44;
+  padding: 3px 0 3px 14px;
+}
+
+.recipient-status.verified {
+  border-color: #4f7b5a;
+}
+
+.recipient-status small,
+.recipient-status strong,
+.recipient-status span {
+  display: block;
+}
+
+.recipient-status small,
+.next-delivery small {
+  color: #8a7d6e;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.recipient-status strong {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.recipient-status span {
+  color: #7a4637;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.recipient-status.verified span {
+  color: #416a4b;
+}
+
+.schedule-message {
+  border-left: 3px solid;
+  padding: 9px 12px;
+  font-size: 11px;
+}
+
+.schedule-message.error {
+  border-color: #a84a37;
+  background: #fff4f1;
+  color: #833725;
+}
+
+.schedule-message.success {
+  border-color: #4f7b5a;
+  background: #f2f8f3;
+  color: #315b3a;
+}
+
+.email-verification {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-top: 1px solid #eadfce;
+  border-bottom: 1px solid #eadfce;
+  background: #fffaf1;
+  padding: 16px 0;
+}
+
+.email-verification > div {
+  flex: 1;
+}
+
+.email-verification strong {
+  font-size: 12px;
+}
+
+.email-verification button,
+.schedule-switch {
+  min-height: 34px;
+}
+
+.email-verification button {
+  border: 1px solid #af7920;
+  border-radius: 5px;
+  background: #9b6816;
+  color: white;
+  padding: 0 13px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.email-verification button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.email-verification form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.email-verification label span {
+  display: block;
+  margin-bottom: 4px;
+  color: #6d6256;
+  font-size: 9px;
+}
+
+.email-verification input {
+  width: 118px;
+  height: 34px;
+  border: 1px solid #cfc0aa;
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+}
+
+.email-verification > small {
+  color: #8a4a3a;
+  font-size: 9px;
+}
+
+.schedule-ledger {
+  border-top: 1px solid #d9cebe;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px 145px;
+  align-items: center;
+  gap: 22px;
+  border-bottom: 1px solid #e9dfd2;
+  padding: 18px 0;
+}
+
+.schedule-row > div strong {
+  font-size: 13px;
+}
+
+.next-delivery b {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.schedule-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #554a3d;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.schedule-switch input {
+  width: 17px;
+  height: 17px;
+  accent-color: #9b6816;
+}
+
+.delivery-history {
+  padding-top: 5px;
+}
+
+.delivery-history > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  border-bottom: 1px solid #d9cebe;
+  padding-bottom: 10px;
+}
+
+.delivery-history h3 {
+  font-size: 16px;
+}
+
+.delivery-history > header > span {
+  color: #766d62;
+  font-size: 10px;
+}
+
+.delivery-table-scroll {
+  overflow-x: auto;
+}
+
+.delivery-history table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.delivery-history th,
+.delivery-history td {
+  border-bottom: 1px solid #eee5d9;
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.delivery-history th {
+  color: #7e7264;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.delivery-history td small {
+  display: block;
+  max-width: 250px;
+  margin-top: 4px;
+  color: #8a5b22;
+  line-height: 1.35;
+}
+
+.delivery-status {
+  color: #6e6256;
+  font-weight: 800;
+}
+
+.delivery-status[data-status='SENT'],
+.delivery-status[data-status='DELIVERED'] {
+  color: #3f704a;
+}
+
+.delivery-status[data-status='PROCESSING'] {
+  color: #8a5b22;
+}
+
+.delivery-status[data-status='FAILED'],
+.delivery-status[data-status='SKIPPED'],
+.delivery-status[data-status='BOUNCED'],
+.delivery-status[data-status='COMPLAINED'] {
+  color: #9a4434;
+}
+
+.delivery-status[data-status='DELAYED'] {
+  color: #8a5b22;
+}
+
+@media (max-width: 760px) {
+  .schedule-intro,
+  .email-verification {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .recipient-status {
+    min-width: 0;
+  }
+
+  .schedule-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .schedule-switch {
+    justify-content: flex-start;
+  }
+
+  .email-verification form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .email-verification input {
+    width: 100%;
+  }
+}

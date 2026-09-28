@@ -1,0 +1,312 @@
+:host {
+  color: #211b13;
+}
+
+.security-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  background: rgb(16 13 9 / 58%);
+}
+
+.security-dialog {
+  position: fixed;
+  z-index: 41;
+  top: 50%;
+  left: 50%;
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(780px, calc(100dvh - 32px));
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border: 1px solid #d8cbb8;
+  border-radius: 8px;
+  background: #fffdf9;
+  box-shadow: 0 24px 60px rgb(31 24 15 / 24%);
+}
+
+.security-header,
+.security-header > div,
+.password-section > header,
+.sessions-section > header,
+.sessions-section li {
+  display: flex;
+  align-items: center;
+}
+
+.security-header {
+  justify-content: space-between;
+  min-height: 76px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e6dccd;
+}
+
+.security-header > div,
+.password-section > header {
+  gap: 12px;
+}
+
+.security-header > div > span,
+.session-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 6px;
+  background: #f4ead7;
+  color: #9b6810;
+}
+
+.security-header svg,
+.password-section header > svg,
+.session-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.security-header p,
+.security-header h2,
+.password-section h3,
+.password-section p,
+.sessions-section h3,
+.sessions-section p {
+  margin: 0;
+}
+
+.security-header p {
+  color: #a36f14;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.security-header h2 {
+  margin-top: 3px;
+  font-size: 19px;
+}
+
+.security-header > button,
+.sessions-section li > button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #ded3c3;
+  border-radius: 6px;
+  background: #fffdf9;
+  color: #6d6254;
+}
+
+.security-header > button:hover,
+.sessions-section li > button:hover:not(:disabled) {
+  border-color: #c7963d;
+  color: #8d5f0e;
+}
+
+.security-content {
+  max-height: calc(min(780px, 100dvh - 32px) - 77px);
+  overflow-y: auto;
+}
+
+.security-error,
+.security-success {
+  margin: 16px 20px 0;
+  padding: 10px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.security-error {
+  border: 1px solid #dfb7ae;
+  background: #fff3f0;
+  color: #8b2e20;
+}
+
+.security-success {
+  border: 1px solid #b8d1b3;
+  background: #f2f8f0;
+  color: #375d31;
+}
+
+.password-section,
+.sessions-section {
+  padding: 20px;
+}
+
+.password-section {
+  border-bottom: 1px solid #e6dccd;
+}
+
+.password-section header > svg {
+  color: #9b6810;
+}
+
+.password-section h3,
+.sessions-section h3 {
+  font-size: 14px;
+}
+
+.password-section p,
+.sessions-section p {
+  margin-top: 4px;
+  color: #786d60;
+  font-size: 11px;
+}
+
+.password-section form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.password-section label {
+  display: grid;
+  gap: 6px;
+  color: #51483d;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.password-section input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #d9cfbf;
+  border-radius: 5px;
+  padding: 0 11px;
+  background: #fff;
+  color: #211b13;
+  outline: none;
+}
+
+.password-section input:focus {
+  border-color: #bb8221;
+  box-shadow: 0 0 0 3px rgb(195 137 36 / 14%);
+}
+
+.security-primary {
+  display: inline-flex;
+  min-height: 40px;
+  grid-column: 1 / -1;
+  justify-self: start;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0 16px;
+  background: #d59a2a;
+  color: #1f180d;
+  font-weight: 700;
+}
+
+.sessions-section > header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sessions-section > header button {
+  min-height: 36px;
+  border: 1px solid #d7cbb9;
+  border-radius: 5px;
+  padding: 0 12px;
+  background: transparent;
+  color: #594d3d;
+  font-weight: 600;
+}
+
+.sessions-section ul {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sessions-section li {
+  gap: 12px;
+  min-height: 76px;
+  border-top: 1px solid #ece4d8;
+  padding: 12px 0;
+}
+
+.sessions-section li > div {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.sessions-section li strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessions-section li strong small {
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #edf5e9;
+  color: #45663d;
+  font-size: 9px;
+}
+
+.sessions-section li span,
+.sessions-section li time,
+.session-loading {
+  color: #7c7163;
+  font-size: 10px;
+}
+
+.sessions-section li > button svg,
+.session-loading svg,
+.security-primary svg {
+  width: 16px;
+  height: 16px;
+}
+
+.session-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 84px;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #a97015;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.spin {
+  animation: security-spin 0.8s linear infinite;
+}
+
+@keyframes security-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .security-dialog {
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    transform: translateX(-50%);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .password-section form {
+    grid-template-columns: 1fr;
+  }
+
+  .security-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}

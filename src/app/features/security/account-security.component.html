@@ -1,0 +1,122 @@
+<div class="security-backdrop" *ngIf="open" (click)="close()" aria-hidden="true"></div>
+
+<section
+  class="security-dialog"
+  *ngIf="open"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="security-title"
+>
+  <header class="security-header">
+    <div>
+      <span><svg lucideShieldCheck aria-hidden="true"></svg></span>
+      <div>
+        <p>ACCOUNT</p>
+        <h2 id="security-title">Security and sessions</h2>
+      </div>
+    </div>
+    <button type="button" aria-label="Close security settings" title="Close" (click)="close()">
+      <svg lucideX></svg>
+    </button>
+  </header>
+
+  <div class="security-content">
+    <p class="security-error" *ngIf="error" role="alert">{{ error }}</p>
+    <p class="security-success" *ngIf="message" role="status">{{ message }}</p>
+
+    <section class="password-section" aria-labelledby="password-title">
+      <header>
+        <svg lucideKeyRound aria-hidden="true"></svg>
+        <div>
+          <h3 id="password-title">Change password</h3>
+          <p>Changing your password signs out every browser, including this one.</p>
+        </div>
+      </header>
+      <form (ngSubmit)="changePassword()">
+        <label>
+          <span>Current password</span>
+          <input
+            name="currentPassword"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="currentPassword"
+            required
+          />
+        </label>
+        <label>
+          <span>New password</span>
+          <input
+            name="newPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="12"
+            [(ngModel)]="newPassword"
+            required
+          />
+        </label>
+        <label>
+          <span>Confirm new password</span>
+          <input
+            name="confirmPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="12"
+            [(ngModel)]="confirmPassword"
+            required
+          />
+        </label>
+        <button class="security-primary" type="submit" [disabled]="passwordBusy">
+          <svg *ngIf="passwordBusy" class="spin" lucideLoaderCircle aria-hidden="true"></svg>
+          {{ passwordBusy ? 'Changing password' : 'Change password' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="sessions-section" aria-labelledby="sessions-title">
+      <header>
+        <div>
+          <h3 id="sessions-title">Active sessions</h3>
+          <p>Review browsers that can access this owner account.</p>
+        </div>
+        <button
+          type="button"
+          [disabled]="loading || !!actionId || sessions.length < 2"
+          (click)="revokeOthers()"
+        >
+          Sign out others
+        </button>
+      </header>
+
+      <div class="session-loading" *ngIf="loading">
+        <svg class="spin" lucideLoaderCircle aria-hidden="true"></svg>
+        Loading sessions
+      </div>
+
+      <ul *ngIf="!loading">
+        <li *ngFor="let session of sessions">
+          <span class="session-icon"><svg lucideMonitorSmartphone aria-hidden="true"></svg></span>
+          <div>
+            <strong>
+              {{ session.deviceName }}
+              <small *ngIf="session.current">Current</small>
+            </strong>
+            <span>{{ session.ipAddress || 'IP unavailable' }}</span>
+            <time [attr.datetime]="session.lastUsedAt">
+              Active {{ session.lastUsedAt | date: 'medium' }}
+            </time>
+          </div>
+          <button
+            type="button"
+            [disabled]="!!actionId"
+            [attr.aria-label]="session.current ? 'Sign out this session' : 'Sign out session'"
+            [title]="session.current ? 'Sign out this session' : 'Sign out session'"
+            (click)="revoke(session)"
+          >
+            <svg *ngIf="actionId !== session.id" lucideLogOut aria-hidden="true"></svg>
+            <svg *ngIf="actionId === session.id" class="spin" lucideLoaderCircle aria-hidden="true"></svg>
+          </button>
+        </li>
+      </ul>
+    </section>
+  </div>
+</section>

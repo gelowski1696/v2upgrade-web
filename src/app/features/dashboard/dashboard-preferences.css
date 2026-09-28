@@ -1,0 +1,437 @@
+.metric-grid [hidden] {
+  display: none !important;
+}
+
+.save-view-command {
+  width: auto !important;
+  grid-auto-flow: column;
+  gap: 8px;
+  padding: 0 13px;
+  color: #49350f !important;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.save-view-command svg {
+  width: 15px;
+  height: 15px;
+}
+
+.preferences-workspace {
+  display: grid;
+  gap: 20px;
+}
+
+.preferences-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 20px;
+}
+
+.preferences-heading p,
+.overview-preferences header p,
+.saved-views header p {
+  margin: 0 0 7px;
+  color: var(--accent-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.preferences-heading h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.preferences-heading div > span,
+.overview-preferences header div > span,
+.saved-views header div > span {
+  display: block;
+  margin-top: 7px;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.preferences-heading > span {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: var(--surface-raised);
+  color: #685e51;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preferences-message {
+  margin: 0;
+  border-left: 3px solid #4e9b64;
+  background: #edf7ef;
+  padding: 11px 14px;
+  color: #346542;
+  font-size: 12px;
+}
+
+.preferences-message.error,
+.save-view-error {
+  border-color: #b84f3a;
+  background: #fff2ef;
+  color: #8e3d2e;
+}
+
+.preferences-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 18px;
+}
+
+.overview-preferences,
+.saved-views {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.overview-preferences > header,
+.saved-views > header {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 19px 20px 17px;
+}
+
+.overview-preferences h3,
+.saved-views h3,
+.preferences-reset h3 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 16px;
+}
+
+.overview-preferences ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overview-preferences li {
+  display: grid;
+  min-height: 76px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 13px 20px;
+}
+
+.overview-preferences li > label {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 11px;
+  cursor: pointer;
+}
+
+.overview-preferences input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--accent-strong);
+}
+
+.overview-preferences label > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.overview-preferences label strong,
+.saved-view-list strong,
+.saved-view-empty strong {
+  color: #302a23;
+  font-size: 12px;
+}
+
+.overview-preferences label small,
+.saved-view-list small {
+  color: var(--ink-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.overview-preferences li > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.overview-preferences li > div > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f6efe3;
+  color: #75510d;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.overview-preferences li button,
+.saved-view-list button {
+  min-height: 30px;
+  border: 1px solid #ddd1c0;
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 9px;
+  color: #5a5044;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.overview-preferences li button:hover:not(:disabled),
+.saved-view-list button:hover:not(:disabled) {
+  border-color: #c8983f;
+  background: #fffaf1;
+}
+
+.overview-preferences > footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 15px 20px;
+}
+
+.preferences-primary-action {
+  min-height: 38px;
+  border: 1px solid #9b6c12;
+  border-radius: 6px;
+  background: #9b6c12;
+  padding: 0 15px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preferences-primary-action:hover:not(:disabled) {
+  border-color: #7c550c;
+  background: #7c550c;
+}
+
+.saved-view-list article {
+  display: flex;
+  min-height: 84px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 15px 20px;
+}
+
+.saved-view-list article:last-child {
+  border-bottom: 0;
+}
+
+.saved-view-list article > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.saved-view-list article > div:first-child > span {
+  overflow: hidden;
+  color: #665c50;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-view-list article > div:last-child {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.saved-view-list button.saved-view-delete {
+  border-color: transparent;
+  color: #9b4938;
+}
+
+.saved-view-list button.saved-view-delete:hover:not(:disabled) {
+  border-color: #e2beb6;
+  background: #fff2ef;
+}
+
+.saved-view-empty {
+  display: grid;
+  min-height: 190px;
+  place-content: center;
+  gap: 6px;
+  padding: 28px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.saved-view-empty span {
+  max-width: 290px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.preferences-reset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--line);
+  padding: 19px 2px 0;
+}
+
+.preferences-reset p {
+  margin: 6px 0 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.preferences-reset button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid #dbbcb5;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0 14px;
+  color: #914331;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preferences-reset button:hover:not(:disabled),
+.preferences-reset button.confirming {
+  border-color: #a64632;
+  background: #a64632;
+  color: #fff;
+}
+
+.save-view-dialog {
+  width: min(560px, 100%);
+}
+
+.save-view-dialog .sale-detail-header > button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #dfd3c1;
+  border-radius: 6px;
+  background: #fff;
+  color: #51483d;
+}
+
+.save-view-dialog .sale-detail-header > button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.save-view-form {
+  display: grid;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.save-view-form label {
+  display: grid;
+  gap: 6px;
+  color: #6e6457;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.save-view-form input,
+.save-view-form select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #dcd0be;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 11px;
+  color: #342e27;
+  font-size: 12px;
+  text-transform: none;
+}
+
+.save-view-form > p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.save-view-form > p.save-view-error {
+  border-left: 3px solid #b84f3a;
+  padding: 10px 12px;
+}
+
+.save-view-form footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 17px;
+}
+
+.save-view-form footer > button:not(.preferences-primary-action) {
+  min-height: 38px;
+  border: 1px solid #ddd1c0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 14px;
+  color: #5a5044;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .preferences-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .preferences-heading,
+  .preferences-reset {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .overview-preferences li {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-preferences li > div {
+    padding-left: 27px;
+  }
+
+  .saved-view-list article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .saved-view-list article > div:last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .preferences-reset button {
+    width: 100%;
+  }
+
+  .save-view-dialog {
+    height: 100dvh;
+  }
+}
