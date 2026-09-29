@@ -104,7 +104,9 @@ sudo docker compose config --quiet
 Build and launch:
 
 ```bash
-sudo docker compose build --pull
+owner_web_release="$(git -C .. rev-parse --short HEAD)"
+api_release="$(git -C ../../subsapi rev-parse --short HEAD)"
+sudo env OWNER_WEB_RELEASE="$owner_web_release" API_RELEASE="$api_release" docker compose build --pull
 sudo docker compose up -d
 sudo docker compose ps
 ```
@@ -231,6 +233,13 @@ curl --head "https://admin.vmjamdocuai.cloud/"
 sudo docker compose ps
 ```
 
+Run the automated public smoke test as well. It verifies the dashboard headers and caching, web and
+API release metadata, API readiness, and end-to-end request-ID propagation:
+
+```bash
+sh ./verify-production.sh
+```
+
 Then open both public hostnames in a browser. Both production applications use same-origin
 `/api/v1`; no browser-side API hostname needs to be configured. The subscription app intentionally
 requires another sign-in after a full browser reload because its tokens are kept only in memory.
@@ -313,7 +322,9 @@ cd /opt/posv2/subscriptionapp-posv2
 git pull --ff-only origin main
 
 cd /opt/posv2/ownerdashboard-posv2/deployment
-sudo docker compose build --pull
+owner_web_release="$(git -C .. rev-parse --short HEAD)"
+api_release="$(git -C ../../subsapi rev-parse --short HEAD)"
+sudo env OWNER_WEB_RELEASE="$owner_web_release" API_RELEASE="$api_release" docker compose build --pull
 sudo docker compose up -d
 sudo docker compose ps
 curl --fail --show-error "https://vmjamdocuai.cloud/api/v1/health"

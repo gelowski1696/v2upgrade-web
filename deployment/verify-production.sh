@@ -83,4 +83,25 @@ assert_single_header "Cache-Control" "immutable" "$work_dir/stylesheet.headers"
 fetch "${owner_url%/}/healthz" health
 grep -Fqx 'ok' "$work_dir/health.body" || fail "health endpoint did not return ok"
 
-printf 'PASS: production headers, CSP stylesheet loading, caching, and health are valid for %s\n' "$owner_url"
+fetch "${owner_url%/}/build-info.json" build_info
+assert_single_header "Cache-Control" "no-store" "$work_dir/build_info.headers"
+grep -Eq '"app"[[:space:]]*:[[:space:]]*"owner-dashboard"' "$work_dir/build_info.body" || \
+  fail "web build information is missing or invalid"
+grep -Eq '"release"[[:space:]]*:[[:space:]]*"[^"]+"' "$work_dir/build_info.body" || \
+  fail "web release identifier is missing"
+
+request_id="posv2-smoke-$(date +%s)"
+curl --fail --silent --show-error \
+  --header "X-Request-ID: $request_id" \
+  --dump-header "$work_dir/api_health.headers" \
+  --output "$work_dir/api_health.body" \
+  "${owner_url%/}/api/v1/health"
+assert_single_header "X-Request-ID" "$request_id" "$work_dir/api_health.headers"
+grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$work_dir/api_health.body" || \
+  fail "API health status is not ok"
+grep -Eq '"service"[[:space:]]*:[[:space:]]*"subsapi"' "$work_dir/api_health.body" || \
+  fail "API service identity is missing"
+grep -Eq '"release"[[:space:]]*:[[:space:]]*"[^"]+"' "$work_dir/api_health.body" || \
+  fail "API release identifier is missing"
+
+printf 'PASS: production headers, caching, release metadata, request IDs, and health are valid for %s\n' "$owner_url"

@@ -364,6 +364,13 @@ svg {
   font-size: 11px;
 }
 
+.portal-sidebar footer .release-info {
+  margin-top: 4px;
+  color: #70685e;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+}
+
 .portal-sidebar footer button,
 .portal-sidebar > header button {
   width: 36px;

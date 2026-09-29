@@ -25,6 +25,8 @@ services:
     build:
       context: ../../subsapi
       dockerfile: Dockerfile
+      args:
+        BUILD_RELEASE: ${API_RELEASE:-development}
     restart: unless-stopped
     init: true
     depends_on:
@@ -93,6 +95,8 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        BUILD_RELEASE: ${OWNER_WEB_RELEASE:-development}
     restart: unless-stopped
     depends_on:
       api:

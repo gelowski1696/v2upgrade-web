@@ -1,10 +1,15 @@
 FROM node:22-alpine AS build
 
+ARG BUILD_RELEASE=development
+ARG BUILD_TIMESTAMP
+ENV BUILD_RELEASE=${BUILD_RELEASE} BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY angular.json tsconfig.json tsconfig.app.json ./
+COPY scripts/write-build-info.mjs ./scripts/write-build-info.mjs
 COPY public ./public
 COPY src ./src
 

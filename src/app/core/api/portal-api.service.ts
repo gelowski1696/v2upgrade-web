@@ -24,9 +24,25 @@ export class PortalApiService {
   private accessToken = '';
   private refreshPromise: Promise<void> | null = null;
   user: PortalUser | null = null;
+  webRelease = 'development';
+  apiRelease = 'unavailable';
 
   constructor(private readonly http: HttpClient) {
     this.removeLegacySession();
+    void this.loadReleaseInfo();
+  }
+
+  private async loadReleaseInfo(): Promise<void> {
+    const [web, api] = await Promise.allSettled([
+      firstValueFrom(this.http.get<{ release?: string }>('/build-info.json')),
+      firstValueFrom(this.http.get<{ release?: string }>(`${this.baseUrl}/health`)),
+    ]);
+    if (web.status === 'fulfilled' && web.value.release) {
+      this.webRelease = web.value.release;
+    }
+    if (api.status === 'fulfilled' && api.value.release) {
+      this.apiRelease = api.value.release;
+    }
   }
 
   async restoreSession(): Promise<boolean> {
