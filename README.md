@@ -32,9 +32,12 @@ exact dashboard origin in both `CORS_ORIGINS` and the narrower `PORTAL_WEB_ORIGI
 
 ```powershell
 npm run build
+npm run verify:production-build
 ```
 
-The optimized output is written to `dist/ownerdashboard-posv2`.
+The optimized output is written to `dist/ownerdashboard-posv2`. The verification command rejects
+source maps, development API URLs, server-only secret names, private keys, and CSP-incompatible
+stylesheet loading in the production bundle.
 
 ## Browser tests
 
@@ -48,6 +51,19 @@ npm test
 The suite starts an isolated dashboard server and checks activation, login, password recovery,
 session management, password changes, store-scoped reporting, profitability comparisons and CSV
 exports, responsive layouts, and access-token refresh on desktop and mobile Chromium.
+
+## Continuous integration
+
+GitHub Actions builds and verifies the production bundle, runs the complete desktop/mobile
+Playwright suite, audits npm dependencies, scans repository history for secrets, builds the runtime
+container, and blocks fixed high or critical image vulnerabilities. Browser traces, screenshots,
+and the HTML report are retained for seven days when the browser job fails.
+
+Protect `main` in the GitHub repository settings and require these checks before merging:
+
+- Build and browser tests
+- Dependency and secret scan
+- Container build and scan
 
 ## Access Flow
 

@@ -1,0 +1,8 @@
+title = "POSV2 owner dashboard secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated printable guide contains embedded base64 PNG data URLs."
+paths = ['''^docs/OWNER_DASHBOARD_FEATURE_GUIDE_PRINT\.html$''']

@@ -195,6 +195,25 @@ admin.vmjamdocuai.cloud {
 }
 ```
 
+When host Caddy and the application Nginx both set the same response header, make Caddy replace the
+upstream value by prefixing the field with `>`. This VPS uses the following policy for both private
+web applications:
+
+```caddyfile
+header {
+    >X-Content-Type-Options "nosniff"
+    >X-Frame-Options "DENY"
+    >Referrer-Policy "strict-origin-when-cross-origin"
+}
+```
+
+Validate and reload the system service after changing `/etc/caddy/Caddyfile`:
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
 If this VPS has no existing reverse proxy and ports 80/443 are free, start the bundled Caddy
 instead:
 
@@ -296,15 +315,21 @@ git pull --ff-only origin main
 cd /opt/posv2/ownerdashboard-posv2/deployment
 sudo docker compose build --pull
 sudo docker compose up -d
-# When this stack terminates HTTPS with the direct-https Caddy profile:
-sudo docker compose --profile direct-https run --rm --no-deps caddy \
-  caddy validate --config /etc/caddy/Caddyfile
-sudo docker compose --profile direct-https up -d --no-deps --force-recreate caddy
 sudo docker compose ps
 curl --fail --show-error "https://vmjamdocuai.cloud/api/v1/health"
 curl --head "https://admin.vmjamdocuai.cloud/"
 sh ./verify-production.sh
 ```
+
+On the current VPS, ports 80 and 443 belong to the systemd-managed Caddy service. Do not start the
+Compose `direct-https` profile there. If `/etc/caddy/Caddyfile` changed, validate and reload it:
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Use the Compose `direct-https` profile only on a host where no existing process owns ports 80 and 443.
 
 To roll back only the subscription frontend, restore the previous `SUBSCRIPTION_WEB_IMAGE_TAG` in
 `.env` and recreate that service without rebuilding it:
