@@ -3,6 +3,35 @@
   min-height: 100vh;
 }
 
+/* WCAG AA contrast floor for compact supporting text. */
+:host .auth-brand > small {
+  color: #8c8274;
+}
+
+:host .portal-sidebar nav > p,
+:host .portal-sidebar footer .release-info {
+  color: #918779;
+}
+
+:host .auth-form header > span,
+:host .report-heading > p {
+  color: #895d0d;
+}
+
+:host .store-selector label > span,
+:host .freshness small,
+:host .report-heading > span,
+:host .date-filter label > span,
+:host .metric-card > small,
+:host .analytics-heading p,
+:host .trend-comparison small,
+:host .trend-plot-heading span,
+:host .trend-bar-column small,
+:host .section-heading p,
+:host .snapshot-footnote span {
+  color: #6f665b;
+}
+
 svg {
   width: 18px;
   height: 18px;

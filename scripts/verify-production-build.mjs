@@ -25,6 +25,17 @@ async function listFiles(directory) {
 const files = await listFiles(buildRoot);
 const relativeFiles = files.map((file) => path.relative(buildRoot, file).replaceAll('\\', '/'));
 const sourceMaps = relativeFiles.filter((file) => file.endsWith('.map'));
+const mainScripts = files.filter((file) => /(?:^|[\\/])main-[^\\/]+\.js$/i.test(file));
+const stylesheets = files.filter((file) => file.endsWith('.css'));
+const mainScriptBytes = await totalSize(mainScripts);
+const stylesheetBytes = await totalSize(stylesheets);
+
+if (mainScriptBytes > 800 * 1024) {
+  failures.push(`main JavaScript is ${mainScriptBytes} bytes; budget is 819200 bytes`);
+}
+if (stylesheetBytes > 60 * 1024) {
+  failures.push(`stylesheets are ${stylesheetBytes} bytes; budget is 61440 bytes`);
+}
 
 if (sourceMaps.length > 0) {
   failures.push(`source maps were emitted: ${sourceMaps.join(', ')}`);
@@ -93,6 +104,23 @@ const totalBytes = (await Promise.all(files.map(async (file) => (await stat(file
   0,
 );
 
+if (totalBytes > 1_500 * 1024) {
+  failures.push(`production output is ${totalBytes} bytes; budget is 1536000 bytes`);
+}
+
+if (failures.length > 0) {
+  console.error('Production build verification failed:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exit(1);
+}
+
 console.log(
-  `Production build verified: ${files.length} files, ${totalBytes} bytes, no source maps, development endpoints, or server secrets.`,
+  `Production build verified: ${files.length} files, ${totalBytes} bytes total, ${mainScriptBytes} bytes main JavaScript, ${stylesheetBytes} bytes CSS.`,
 );
+
+async function totalSize(selectedFiles) {
+  return (await Promise.all(selectedFiles.map(async (file) => (await stat(file)).size))).reduce(
+    (sum, size) => sum + size,
+    0,
+  );
+}

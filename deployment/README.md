@@ -240,6 +240,15 @@ API release metadata, API readiness, and end-to-end request-ID propagation:
 sh ./verify-production.sh
 ```
 
+The repository's `Production monitor` GitHub Actions workflow also checks the public dashboard,
+database-backed API readiness, deployed release identifiers, required security headers, response
+latency, and TLS certificate lifetime every 30 minutes. Enable GitHub Actions failure notifications
+for the repository. Run the same monitor manually from a workstation with Node.js 22 using:
+
+```bash
+npm run monitor:production
+```
+
 Then open both public hostnames in a browser. Both production applications use same-origin
 `/api/v1`; no browser-side API hostname needs to be configured. The subscription app intentionally
 requires another sign-in after a full browser reload because its tokens are kept only in memory.

@@ -1,4 +1,5 @@
 import { expect, Page, Request, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 const user = {
   id: 'portal-user',
@@ -21,6 +22,40 @@ const store = {
     activatedAt: '2026-09-30T12:02:00.000Z',
   },
 };
+
+test('meets the automated accessibility baseline on sign in', async ({ page }) => {
+  await mockReports(page, async () => undefined);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+
+  const results = await accessibilityScan(page);
+
+  expect(results.violations.length, formatAccessibilityViolations(results.violations)).toBe(0);
+});
+
+test('keeps the sign-in controls keyboard reachable in order', async ({ page }) => {
+  await mockReports(page, async () => undefined);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Email or username')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Password')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeFocused();
+});
+
+test('meets the automated accessibility baseline on the dashboard', async ({ page }) => {
+  await seedSession(page);
+  await mockReports(page, async () => undefined);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+
+  const results = await accessibilityScan(page);
+
+  expect(results.violations.length, formatAccessibilityViolations(results.violations)).toBe(0);
+});
 
 test('activates a portal account and opens the synchronized overview', async ({ page }) => {
   await mockReports(page, async (request) => {
@@ -2783,4 +2818,27 @@ function portalSession(id: string, deviceName: string, current: boolean) {
     lastUsedAt: '2026-09-30T12:00:00.000Z',
     expiresAt: '2026-10-30T12:00:00.000Z',
   };
+}
+
+function accessibilityScan(page: Page) {
+  return new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+}
+
+function formatAccessibilityViolations(
+  violations: Array<{
+    id: string;
+    help: string;
+    nodes: Array<{ target: unknown; failureSummary?: string }>;
+  }>,
+): string {
+  return violations
+    .map(
+      (violation) =>
+        `${violation.id}: ${violation.help}\n${violation.nodes
+          .map((node) => `  ${String(node.target)}: ${node.failureSummary ?? 'failed'}`)
+          .join('\n')}`,
+    )
+    .join('\n');
 }

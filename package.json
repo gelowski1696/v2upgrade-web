@@ -7,6 +7,7 @@
     "start": "ng serve",
     "prebuild": "node scripts/write-build-info.mjs",
     "build": "ng build",
+    "monitor:production": "node scripts/monitor-production.mjs",
     "verify:production-build": "node scripts/verify-production-build.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "playwright test",
@@ -33,6 +34,7 @@
     "@angular/build": "^21.2.24",
     "@angular/cli": "^21.2.24",
     "@angular/compiler-cli": "^21.2.0",
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"

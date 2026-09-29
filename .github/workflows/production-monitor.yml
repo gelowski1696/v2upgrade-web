@@ -1,0 +1,39 @@
+name: Production monitor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/production-monitor.yml
+      - scripts/monitor-production.mjs
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-dashboard-production-monitor
+  cancel-in-progress: true
+
+jobs:
+  public-health:
+    name: Uptime, API, and TLS certificate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Check production availability and certificate
+        run: node scripts/monitor-production.mjs
+        env:
+          OWNER_URL: https://vmjamdocuai.cloud
+          MONITOR_MAX_LATENCY_MS: '5000'
+          MONITOR_MIN_CERTIFICATE_DAYS: '14'
