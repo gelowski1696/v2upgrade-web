@@ -17,18 +17,31 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class PortalApiService {
-  private readonly baseUrl = (
-    localStorage.getItem('posv2.portalApiUrl') || defaultPortalApiUrl()
+  private readonly baseUrl = (isLocalDevelopmentHost()
+    ? localStorage.getItem('posv2.portalApiUrl') || defaultPortalApiUrl()
+    : defaultPortalApiUrl()
   ).replace(/\/$/, '');
-  private accessToken = localStorage.getItem('posv2.portalAccessToken') || '';
-  private refreshToken = localStorage.getItem('posv2.portalRefreshToken') || '';
-  user: PortalUser | null = this.readUser();
+  private accessToken = '';
+  private refreshPromise: Promise<void> | null = null;
+  user: PortalUser | null = null;
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {
+    this.removeLegacySession();
+  }
+
+  async restoreSession(): Promise<boolean> {
+    try {
+      await this.refresh();
+      return true;
+    } catch {
+      this.clearSession();
+      return false;
+    }
+  }
 
   async login(username: string, password: string): Promise<PortalUser> {
     const result = await firstValueFrom(
-      this.http.post<AuthResult>(`${this.baseUrl}/portal/auth/login`, { username, password }),
+      this.webPost<AuthResult>('/portal/auth/web/login', { username, password }),
     );
     this.saveSession(result);
     return result.user;
@@ -36,7 +49,7 @@ export class PortalApiService {
 
   async activate(token: string, password: string): Promise<PortalUser> {
     const result = await firstValueFrom(
-      this.http.post<AuthResult>(`${this.baseUrl}/portal/auth/activate`, { token, password }),
+      this.webPost<AuthResult>('/portal/auth/web/activate', { token, password }),
     );
     this.saveSession(result);
     return result.user;
@@ -56,7 +69,7 @@ export class PortalApiService {
       currentPassword,
       newPassword,
     });
-    this.clearSession();
+    await this.logout();
   }
 
   sessions(): Promise<PortalSession[]> {
@@ -65,7 +78,7 @@ export class PortalApiService {
 
   async revokeSession(sessionId: string): Promise<void> {
     await this.authorized<void>('DELETE', `/portal/auth/sessions/${encodeURIComponent(sessionId)}`);
-    if (sessionId === this.user?.sessionId) this.clearSession();
+    if (sessionId === this.user?.sessionId) await this.logout();
   }
 
   async revokeOtherSessions(): Promise<void> {
@@ -73,16 +86,11 @@ export class PortalApiService {
   }
 
   async logout(): Promise<void> {
-    const refreshToken = this.refreshToken;
     this.clearSession();
-    if (refreshToken) {
-      try {
-        await firstValueFrom(
-          this.http.post<void>(`${this.baseUrl}/portal/auth/logout`, { refreshToken }),
-        );
-      } catch {
-        /* Local logout is complete. */
-      }
+    try {
+      await firstValueFrom(this.webPost<void>('/portal/auth/web/logout', {}));
+    } catch {
+      /* Local logout is complete. */
     }
   }
 
@@ -433,14 +441,9 @@ export class PortalApiService {
         }),
       );
     } catch (error) {
-      if (
-        retry &&
-        error instanceof HttpErrorResponse &&
-        error.status === 401 &&
-        this.refreshToken
-      ) {
+      if (retry && error instanceof HttpErrorResponse && error.status === 401) {
         try {
-          await this.refresh();
+          await this.refreshOnce();
           return this.authorized<T>(method, path, body, false);
         } catch (refreshError) {
           this.clearSession();
@@ -451,42 +454,58 @@ export class PortalApiService {
     }
   }
 
-  private async refresh(): Promise<void> {
-    const result = await firstValueFrom(
-      this.http.post<AuthResult>(`${this.baseUrl}/portal/auth/refresh`, {
-        refreshToken: this.refreshToken,
-      }),
-    );
-    this.saveSession(result);
+  private async refresh(concurrentRetries = 2): Promise<void> {
+    try {
+      const result = await firstValueFrom(
+        this.webPost<AuthResult>('/portal/auth/web/refresh', {}),
+      );
+      this.saveSession(result);
+    } catch (error) {
+      if (
+        concurrentRetries > 0 &&
+        error instanceof HttpErrorResponse &&
+        error.status === 409
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return this.refresh(concurrentRetries - 1);
+      }
+      throw error;
+    }
+  }
+  private refreshOnce(): Promise<void> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.refresh().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
   }
   private saveSession(result: AuthResult): void {
     this.accessToken = result.accessToken;
-    this.refreshToken = result.refreshToken;
     this.user = result.user;
-    localStorage.setItem('posv2.portalAccessToken', result.accessToken);
-    localStorage.setItem('posv2.portalRefreshToken', result.refreshToken);
-    localStorage.setItem('posv2.portalUser', JSON.stringify(result.user));
   }
   private clearSession(): void {
     this.accessToken = '';
-    this.refreshToken = '';
     this.user = null;
+    this.removeLegacySession();
+  }
+  private removeLegacySession(): void {
     localStorage.removeItem('posv2.portalAccessToken');
     localStorage.removeItem('posv2.portalRefreshToken');
     localStorage.removeItem('posv2.portalUser');
   }
-  private readUser(): PortalUser | null {
-    try {
-      const value = localStorage.getItem('posv2.portalUser');
-      return value ? (JSON.parse(value) as PortalUser) : null;
-    } catch {
-      return null;
-    }
+  private webPost<T>(path: string, body: unknown) {
+    return this.http.post<T>(`${this.baseUrl}${path}`, body, {
+      withCredentials: true,
+      headers: { 'X-POSV2-CSRF': '1' },
+    });
   }
 }
 
 function defaultPortalApiUrl(): string {
-  return ['localhost', '127.0.0.1'].includes(window.location.hostname)
-    ? 'http://127.0.0.1:3100/api/v1'
-    : '/api/v1';
+  return isLocalDevelopmentHost() ? `http://${window.location.hostname}:3100/api/v1` : '/api/v1';
+}
+
+function isLocalDevelopmentHost(): boolean {
+  return ['localhost', '127.0.0.1'].includes(window.location.hostname);
 }

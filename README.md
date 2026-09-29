@@ -17,9 +17,16 @@ npm install
 npm start
 ```
 
-Open `http://localhost:4200/`. The development API defaults to `http://127.0.0.1:3100/api/v1`.
+Open `http://localhost:4200/`. The development API uses the same hostname on port 3100, for example
+`http://localhost:3100/api/v1`.
 
-For a different API, set `posv2.portalApiUrl` in browser local storage before signing in. A production deployment should replace this runtime override with its HTTPS API URL during deployment.
+For a different local API, set `posv2.portalApiUrl` in browser local storage before signing in.
+Production always uses the same-origin `/api/v1` proxy and ignores this development override.
+
+Owner browser sessions use a short-lived access token held only in memory and a rotating refresh
+credential stored by the API in an HttpOnly cookie. Local development must use the same hostname for
+the dashboard and API (for example, `127.0.0.1` for both). Production must use HTTPS and list the
+exact dashboard origin in both `CORS_ORIGINS` and the narrower `PORTAL_WEB_ORIGINS`.
 
 ## Build
 

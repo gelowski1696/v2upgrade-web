@@ -44,6 +44,5 @@ export interface PortalSession {
 
 export interface AuthResult {
   accessToken: string;
-  refreshToken: string;
   user: PortalUser;
 }

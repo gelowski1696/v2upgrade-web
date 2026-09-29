@@ -1,3 +1,9 @@
+<main class="session-loading" *ngIf="sessionInitializing" aria-busy="true">
+  <span class="brand-mark" aria-hidden="true"><svg lucideActivity></svg></span>
+  <p role="status">Restoring your secure session...</p>
+</main>
+
+<ng-container *ngIf="!sessionInitializing">
 <main class="auth-layout" *ngIf="!api.user; else portal">
   <section class="auth-brand" aria-labelledby="portal-name">
     <div class="auth-brand-lockup">
@@ -5180,3 +5186,4 @@
     (sessionEnded)="handleSessionEnded()"
   />
 </ng-template>
+</ng-container>

@@ -24,7 +24,7 @@ const store = {
 
 test('activates a portal account and opens the synchronized overview', async ({ page }) => {
   await mockReports(page, async (request) => {
-    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/activate')) {
+    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/web/activate')) {
       return authResult();
     }
     return undefined;
@@ -204,7 +204,7 @@ test('signs in, opens sales, and changes pages without losing the store scope', 
   page,
 }) => {
   await mockReports(page, async (request) => {
-    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/login')) {
+    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/web/login')) {
       return authResult();
     }
     return undefined;
@@ -2452,14 +2452,7 @@ test('enables verified scheduled summaries and shows delivery health', async ({ 
 });
 
 test('rotates an expired access token and resumes the report request', async ({ page }) => {
-  await page.addInitScript(
-    ({ seededUser }) => {
-      localStorage.setItem('posv2.portalAccessToken', 'expired-access-token');
-      localStorage.setItem('posv2.portalRefreshToken', 'valid-refresh-token');
-      localStorage.setItem('posv2.portalUser', JSON.stringify(seededUser));
-    },
-    { seededUser: user },
-  );
+  await seedSession(page);
 
   let storeRequests = 0;
   let refreshRequests = 0;
@@ -2468,9 +2461,9 @@ test('rotates an expired access token and resumes the report request', async ({ 
       storeRequests += 1;
       if (storeRequests === 1) return { status: 401, json: { message: 'Expired' } };
     }
-    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/refresh')) {
+    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/web/refresh')) {
       refreshRequests += 1;
-      return authResult('rotated-access-token', 'rotated-refresh-token');
+      return authResult(refreshRequests === 1 ? 'expired-access-token' : 'rotated-access-token');
     }
     return undefined;
   });
@@ -2478,11 +2471,37 @@ test('rotates an expired access token and resumes the report request', async ({ 
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
-  await expect.poll(() => refreshRequests).toBe(1);
+  await expect.poll(() => refreshRequests).toBe(2);
   await expect.poll(() => storeRequests).toBe(2);
-  expect(await page.evaluate(() => localStorage.getItem('posv2.portalAccessToken'))).toBe(
-    'rotated-access-token',
-  );
+  expect(await page.evaluate(() => localStorage.getItem('posv2.portalAccessToken'))).toBeNull();
+});
+
+test('retries session restoration when another tab has just rotated the cookie', async ({
+  page,
+}) => {
+  await seedSession(page);
+  let refreshRequests = 0;
+  await mockReports(page, async (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/portal/auth/web/refresh')) {
+      refreshRequests += 1;
+      if (refreshRequests === 1) {
+        return {
+          status: 409,
+          json: {
+            code: 'PORTAL_REFRESH_ALREADY_ROTATED',
+            message: 'The browser session was refreshed by another request.',
+          },
+        };
+      }
+      return authResult('access-token-after-concurrent-refresh');
+    }
+    return undefined;
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+  await expect.poll(() => refreshRequests).toBe(2);
 });
 
 test('resets a password with an administrator-issued token', async ({ page }) => {
@@ -2530,7 +2549,10 @@ test('reviews sessions and signs out other browsers', async ({ page }) => {
 
   await page.goto('/');
   const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
+  if ((page.viewportSize()?.width ?? 1_000) <= 980) {
+    await expect(openMenu).toBeVisible();
+    await openMenu.click();
+  }
   await page.getByRole('button', { name: 'Security and sessions' }).click();
 
   await expect(page.getByRole('dialog', { name: 'Security and sessions' })).toBeVisible();
@@ -2556,7 +2578,10 @@ test('changes password and returns to sign in because all sessions are revoked',
 
   await page.goto('/');
   const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
+  if ((page.viewportSize()?.width ?? 1_000) <= 980) {
+    await expect(openMenu).toBeVisible();
+    await openMenu.click();
+  }
   await page.getByRole('button', { name: 'Security and sessions' }).click();
   await page.getByLabel('Current password').fill('CurrentOwnerPassword123!');
   await page.getByLabel('New password', { exact: true }).fill('ChangedOwnerPassword123!');
@@ -2579,6 +2604,14 @@ async function mockReports(
       return;
     }
     const url = new URL(request.url());
+    if (
+      request.method() === 'POST' &&
+      url.pathname.endsWith('/portal/auth/web/refresh') &&
+      request.headers()['cookie']?.includes('posv2-portal-refresh=')
+    ) {
+      await route.fulfill(response(authResult()));
+      return;
+    }
     if (request.method() === 'GET' && url.pathname.endsWith('/portal/stores')) {
       await route.fulfill(response({ json: [store] }));
       return;
@@ -2697,8 +2730,8 @@ function response(value: MockResponse) {
   };
 }
 
-function authResult(accessToken = 'access-token', refreshToken = 'refresh-token'): MockResponse {
-  return { json: { accessToken, refreshToken, user } };
+function authResult(accessToken = 'access-token'): MockResponse {
+  return { json: { accessToken, user } };
 }
 
 function fresh(data: unknown) {
@@ -2750,14 +2783,16 @@ function inventoryItem() {
 }
 
 async function seedSession(page: Page): Promise<void> {
-  await page.addInitScript(
-    ({ seededUser }) => {
-      localStorage.setItem('posv2.portalAccessToken', 'access-token');
-      localStorage.setItem('posv2.portalRefreshToken', 'refresh-token');
-      localStorage.setItem('posv2.portalUser', JSON.stringify(seededUser));
+  await page.context().addCookies([
+    {
+      name: 'posv2-portal-refresh',
+      value: 'test-refresh-token',
+      domain: '127.0.0.1',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Strict',
     },
-    { seededUser: user },
-  );
+  ]);
 }
 
 function portalSession(id: string, deviceName: string, current: boolean) {

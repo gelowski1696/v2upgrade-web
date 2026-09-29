@@ -151,6 +151,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     { key: 'preferences', label: 'Preferences', icon: 'settings' },
   ];
   authMode: 'login' | 'activate' | 'reset' = 'login';
+  sessionInitializing = true;
   username = '';
   password = '';
   activationToken = '';
@@ -321,7 +322,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     private readonly changeDetector: ChangeDetectorRef,
   ) {}
   async ngOnInit(): Promise<void> {
-    if (this.api.user) await this.loadStores();
+    const restored = await this.api.restoreSession();
+    this.sessionInitializing = false;
+    if (restored) await this.loadStores();
+    this.changeDetector.detectChanges();
   }
   ngOnDestroy(): void {
     if (this.filterTimer) clearTimeout(this.filterTimer);

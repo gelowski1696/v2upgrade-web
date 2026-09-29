@@ -9,6 +9,22 @@ svg {
   stroke-width: 1.8;
 }
 
+.session-loading {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: var(--ink-strong);
+  color: #fff9ee;
+}
+
+.session-loading p {
+  margin: 0;
+  color: #b9afa0;
+  font-size: 13px;
+}
+
 /* Authentication */
 .auth-layout {
   display: grid;
