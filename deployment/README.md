@@ -296,9 +296,14 @@ git pull --ff-only origin main
 cd /opt/posv2/ownerdashboard-posv2/deployment
 sudo docker compose build --pull
 sudo docker compose up -d
+# When this stack terminates HTTPS with the direct-https Caddy profile:
+sudo docker compose --profile direct-https run --rm --no-deps caddy \
+  caddy validate --config /etc/caddy/Caddyfile
+sudo docker compose --profile direct-https up -d --no-deps --force-recreate caddy
 sudo docker compose ps
 curl --fail --show-error "https://vmjamdocuai.cloud/api/v1/health"
 curl --head "https://admin.vmjamdocuai.cloud/"
+sh ./verify-production.sh
 ```
 
 To roll back only the subscription frontend, restore the previous `SUBSCRIPTION_WEB_IMAGE_TAG` in

@@ -170,9 +170,7 @@ test('tracks monthly sales targets and saves portal-only target values', async (
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales targets' }).click();
+  await navigateToReport(page, 'Sales targets');
 
   const workspace = page.getByRole('region', { name: /September 2026/ });
   await expect(workspace).toBeVisible();
@@ -216,9 +214,7 @@ test('signs in, opens sales, and changes pages without losing the store scope', 
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales', exact: true }).click();
+  await navigateToReport(page, 'Sales');
 
   await expect(page.getByRole('heading', { name: 'Sales' })).toBeVisible();
   await expect(page.getByText('SALE-PAGE-1')).toBeVisible();
@@ -262,9 +258,7 @@ test('debounces report search, resets paging, and clears sales filters', async (
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales', exact: true }).click();
+  await navigateToReport(page, 'Sales');
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByText('SALE-PAGE-2')).toBeVisible();
 
@@ -345,9 +339,7 @@ test('opens a read-only sale detail with items, notes, and totals', async ({ pag
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales', exact: true }).click();
+  await navigateToReport(page, 'Sales');
   await page.getByRole('button', { name: 'View details for sale SALE-PAGE-1' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'SALE-PAGE-1' });
@@ -476,9 +468,7 @@ test('opens a read-only transfer detail with items and supplier payments', async
   });
 
   await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Transfers', exact: true }).click();
+  await navigateToReport(page, 'Transfers');
   await page.getByRole('button', { name: 'View details for transfer TR-1' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'TR-1' });
@@ -508,9 +498,7 @@ test('shows a recoverable state when a sale detail no longer exists', async ({ p
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales', exact: true }).click();
+  await navigateToReport(page, 'Sales');
   await page.getByRole('button', { name: 'View details for sale SALE-PAGE-1' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -540,9 +528,7 @@ test('exports every matching report row with the selected store and dates', asyn
 
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(0);
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Sales', exact: true }).click();
+  await navigateToReport(page, 'Sales');
 
   await page.getByLabel('Search Sales').fill('Test Customer');
   await page.getByLabel('Status').selectOption('COMPLETED');
@@ -671,9 +657,7 @@ test('reviews receivables aging and opens read-only customer history', async ({ 
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Customer balances' }).click();
+  await navigateToReport(page, 'Customer balances');
 
   const aging = page.getByRole('region', { name: 'Receivables aging' });
   await expect(aging).toBeVisible();
@@ -731,9 +715,7 @@ test('loads cash flow as a date-range report without pagination parameters', asy
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Cash flow', exact: true }).click();
+  await navigateToReport(page, 'Cash flow');
 
   await expect(page.getByRole('heading', { name: 'Cash flow' })).toBeVisible();
   await expect(page.getByText(/1,350\.00/)).toBeVisible();
@@ -805,9 +787,7 @@ test('opens a reconciled cash-flow source ledger and changes pages', async ({ pa
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Cash flow', exact: true }).click();
+  await navigateToReport(page, 'Cash flow');
 
   const sourceButton = page.getByRole('button', {
     name: 'View transactions for sales receipts',
@@ -907,9 +887,7 @@ test('monitors inventory, filters stock status, and opens item movement history'
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Inventory', exact: true }).click();
+  await navigateToReport(page, 'Inventory');
 
   const monitoring = page.getByRole('region', { name: 'Inventory monitoring' });
   await expect(monitoring).toBeVisible();
@@ -1036,9 +1014,7 @@ test('forecasts inventory demand, filters reorder risk, and exports the plan', a
   });
 
   await page.goto('/');
-  const openMenu = page.getByRole('button', { name: 'Open menu' });
-  if (await openMenu.isVisible()) await openMenu.click();
-  await page.locator('nav').getByRole('button', { name: 'Reorder planning' }).click();
+  await navigateToReport(page, 'Reorder planning');
 
   const forecast = page.getByRole('region', { name: 'Inventory demand forecast' });
   await expect(forecast).toBeVisible();
@@ -1474,9 +1450,7 @@ test('opens supplier, product, payment, and authorized-store monitoring views', 
 
   await page.goto('/');
   const selectReport = async (name: string) => {
-    const menu = page.getByRole('button', { name: 'Open menu' });
-    if (await menu.isVisible()) await menu.click();
-    await page.locator('nav').getByRole('button', { name, exact: true }).click();
+    await navigateToReport(page, name);
   };
 
   await selectReport('Restocks & suppliers');
@@ -1634,9 +1608,7 @@ test('ranks product profitability, compares periods, and exports matching rows',
   });
 
   await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Profitability', exact: true }).click();
+  await navigateToReport(page, 'Profitability');
 
   const workspace = page.getByRole('region', { name: 'Product and category profitability' });
   await expect(workspace).toBeVisible();
@@ -1679,6 +1651,7 @@ test('ranks product profitability, compares periods, and exports matching rows',
 
 test('ranks customer purchases and opens read-only purchase history', async ({ page }) => {
   await seedSession(page);
+  await page.clock.setFixedTime(new Date('2026-09-28T04:00:00.000Z'));
   const insightUrls: string[] = [];
   let historyUrl = '';
   let exportUrl = '';
@@ -1787,9 +1760,7 @@ test('ranks customer purchases and opens read-only purchase history', async ({ p
   });
 
   await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Customer insights', exact: true }).click();
+  await navigateToReport(page, 'Customer insights');
 
   const workspace = page.getByRole('region', { name: 'Customer purchase insights' });
   await expect(workspace).toBeVisible();
@@ -1895,9 +1866,7 @@ test('saves, restores, orders, deletes, and resets dashboard preferences', async
   });
 
   const navigateTo = async (name: string) => {
-    const menu = page.getByRole('button', { name: 'Open menu' });
-    if (await menu.isVisible()) await menu.click();
-    await page.locator('nav').getByRole('button', { name, exact: true }).click();
+    await navigateToReport(page, name);
   };
 
   await page.goto('/');
@@ -2050,9 +2019,7 @@ test('filters and pages the owner-safe portal activity log', async ({ page }) =>
   });
 
   await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Activity log', exact: true }).click();
+  await navigateToReport(page, 'Activity log');
 
   const activity = page.getByRole('region', { name: 'Account and platform activity' });
   await expect(activity).toBeVisible();
@@ -2297,9 +2264,7 @@ test('shows enabled Feature Mod reports without Feature Mods settings', async ({
 
   await page.goto('/');
   const selectReport = async (name: string) => {
-    const menu = page.getByRole('button', { name: 'Open menu' });
-    if (await menu.isVisible()) await menu.click();
-    await page.locator('nav').getByRole('button', { name, exact: true }).click();
+    await navigateToReport(page, name);
   };
 
   const dateInputs = page.locator('.date-filter input[type="date"]');
@@ -2431,9 +2396,7 @@ test('enables verified scheduled summaries and shows delivery health', async ({ 
   });
 
   await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Open menu' });
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('nav').getByRole('button', { name: 'Scheduled reports' }).click();
+  await navigateToReport(page, 'Scheduled reports');
 
   await expect(page.getByRole('heading', { name: 'Summary schedule' })).toBeVisible();
   await expect(page.locator('.recipient-status').getByText(user.username)).toBeVisible();
@@ -2591,6 +2554,20 @@ test('changes password and returns to sign in because all sessions are revoked',
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('posv2.portalAccessToken'))).toBeNull();
 });
+
+async function navigateToReport(page: Page, name: string): Promise<void> {
+  if ((page.viewportSize()?.width ?? 1_000) <= 980) {
+    const openMenu = page.getByRole('button', { name: 'Open menu' });
+    await expect(openMenu).toBeVisible();
+    await openMenu.click();
+    await expect(page.locator('.portal-shell')).toHaveClass(/menu-open/);
+  }
+
+  await page
+    .getByRole('navigation', { name: 'Business reports' })
+    .getByRole('button', { name, exact: true })
+    .click();
+}
 
 async function mockReports(
   page: Page,
