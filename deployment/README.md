@@ -1,9 +1,10 @@
-# POSv2 Owner Dashboard — Ubuntu VPS Deployment
+# POSV2 Web Applications — Ubuntu VPS Deployment
 
-This stack deploys the owner dashboard and API behind one HTTPS domain. Its default mode is safe
-for a VPS that already has an Nginx or Caddy reverse proxy:
+This stack deploys the owner dashboard, subscription administration app, and API behind two HTTPS
+hostnames. Its default mode is safe for a VPS that already has an Nginx or Caddy reverse proxy:
 
 - The web container binds only to `127.0.0.1:3200`.
+- The subscription web container binds only to `127.0.0.1:3202`.
 - The API container binds only to `127.0.0.1:3201`.
 - The existing host reverse proxy terminates HTTPS and routes the domain to those ports.
 - The bundled Caddy service is available only through the optional `direct-https` profile.
@@ -15,9 +16,10 @@ for a VPS that already has an Nginx or Caddy reverse proxy:
 
 ## 1. Prepare DNS And The VPS
 
-Create an `A` record for the deployment domain pointing to the VPS public IPv4 address. Add an
-`AAAA` record only when IPv6 is configured and reaches this VPS. Allow inbound TCP ports 22, 80,
-and 443, plus UDP 443 for HTTP/3, in the provider firewall. Do not publish PostgreSQL port 5432.
+Create `A` records for `vmjamdocuai.cloud` and `admin.vmjamdocuai.cloud`, both pointing to the VPS
+public IPv4 address. Add `AAAA` records only when IPv6 is configured and reaches this VPS. Allow
+inbound TCP ports 22, 80, and 443, plus UDP 443 for HTTP/3, in the provider firewall. Do not publish
+PostgreSQL port 5432.
 
 The existing reverse proxy can obtain a public certificate only after the domain resolves to this
 VPS and ports 80 and 443 are reachable.
@@ -44,11 +46,12 @@ sudo chown "$USER":"$USER" /opt/posv2
 cd /opt/posv2
 git clone git@github.com:gelowski1696/v2upgrade-api.git subsapi
 git clone git@github.com:gelowski1696/v2upgrade-web.git ownerdashboard-posv2
+git clone YOUR_SUBSCRIPTION_APP_REPOSITORY subscriptionapp-posv2
 ```
 
-The resulting paths are `/opt/posv2/subsapi` for the API and
-`/opt/posv2/ownerdashboard-posv2` for the web application. The production Compose stack is stored
-inside `ownerdashboard-posv2/deployment`.
+The resulting paths are `/opt/posv2/subsapi`, `/opt/posv2/ownerdashboard-posv2`, and
+`/opt/posv2/subscriptionapp-posv2`. The production Compose stack is stored inside
+`ownerdashboard-posv2/deployment`.
 
 ## 3. Configure Production Secrets
 
@@ -76,13 +79,16 @@ nano .env
 
 Required changes:
 
-1. Set `DOMAIN` to the existing domain without `https://` or a path.
+1. Set `OWNER_DOMAIN=vmjamdocuai.cloud` and `ADMIN_DOMAIN=admin.vmjamdocuai.cloud`.
 2. Set `ACME_EMAIL` to the certificate-administration address.
 3. Put the generated PostgreSQL password in both `POSTGRES_PASSWORD` and the password portion of
    `DATABASE_URL`.
 4. Replace all four JWT placeholders with different generated values.
 5. Leave scheduled reports disabled until Resend is configured.
-6. Keep `WEB_HOST_PORT=3200` and `API_HOST_PORT=3201` unless either port is already occupied.
+6. Keep `WEB_HOST_PORT=3200`, `API_HOST_PORT=3201`, and `SUBSCRIPTION_WEB_HOST_PORT=3202` unless a
+   port is already occupied.
+7. Set `SUBSCRIPTION_WEB_IMAGE_TAG` to a unique release identifier such as the release date or Git
+   commit.
 
 Do not commit or share `ownerdashboard-posv2/deployment/.env`.
 
@@ -109,7 +115,7 @@ migrations are applied during deployment.
 Watch first-start logs:
 
 ```bash
-sudo docker compose logs -f --tail=100 postgres api web
+sudo docker compose logs -f --tail=100 postgres api web subscription-web
 ```
 
 Press `Ctrl+C` to stop following logs; the containers continue running.
@@ -121,10 +127,11 @@ Confirm the new loopback ports work before changing the public proxy:
 ```bash
 curl --fail --show-error http://127.0.0.1:3201/api/v1/health
 curl --head http://127.0.0.1:3200/
+curl --head http://127.0.0.1:3202/
 ```
 
-For host Nginx, route the dashboard domain with the following locations inside its HTTPS server
-block:
+For host Nginx, keep the owner dashboard on `vmjamdocuai.cloud` with the following locations inside
+its HTTPS server block:
 
 ```nginx
 location /api/ {
@@ -148,16 +155,42 @@ location / {
 }
 ```
 
-For host Caddy:
+Add a second HTTPS server block for the subscription application:
+
+```nginx
+server {
+    server_name admin.vmjamdocuai.cloud;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3202;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+For host Caddy, keep the existing owner site and add:
 
 ```caddyfile
-YOUR_DOMAIN {
+admin.vmjamdocuai.cloud {
     handle /api/* {
         reverse_proxy 127.0.0.1:3201
     }
 
     handle {
-        reverse_proxy 127.0.0.1:3200
+        reverse_proxy 127.0.0.1:3202
     }
 }
 ```
@@ -172,13 +205,16 @@ sudo docker compose --profile direct-https up -d
 ## 6. Verify The Deployment
 
 ```bash
-curl --fail --show-error "https://YOUR_DOMAIN/api/v1/health"
-curl --head "https://YOUR_DOMAIN/"
+curl --fail --show-error "https://vmjamdocuai.cloud/api/v1/health"
+curl --head "https://vmjamdocuai.cloud/"
+curl --fail --show-error "https://admin.vmjamdocuai.cloud/api/v1/health"
+curl --head "https://admin.vmjamdocuai.cloud/"
 sudo docker compose ps
 ```
 
-Then open `https://YOUR_DOMAIN` in a browser. The production web application uses same-origin
-`/api/v1`; no browser-side API hostname needs to be configured.
+Then open both public hostnames in a browser. Both production applications use same-origin
+`/api/v1`; no browser-side API hostname needs to be configured. The subscription app intentionally
+requires another sign-in after a full browser reload because its tokens are kept only in memory.
 
 ## 7. Create The Initial API Administrator
 
@@ -206,7 +242,7 @@ RESEND_WEBHOOK_SECRET=whsec_xxxxxxxxx
 Configure the Resend webhook as:
 
 ```text
-https://YOUR_DOMAIN/api/v1/webhooks/resend
+https://vmjamdocuai.cloud/api/v1/webhooks/resend
 ```
 
 Apply the change:
@@ -254,21 +290,33 @@ git pull --ff-only origin main
 cd /opt/posv2/ownerdashboard-posv2
 git pull --ff-only origin main
 
+cd /opt/posv2/subscriptionapp-posv2
+git pull --ff-only origin main
+
 cd /opt/posv2/ownerdashboard-posv2/deployment
 sudo docker compose build --pull
 sudo docker compose up -d
 sudo docker compose ps
-curl --fail --show-error "https://YOUR_DOMAIN/api/v1/health"
+curl --fail --show-error "https://vmjamdocuai.cloud/api/v1/health"
+curl --head "https://admin.vmjamdocuai.cloud/"
+```
+
+To roll back only the subscription frontend, restore the previous `SUBSCRIPTION_WEB_IMAGE_TAG` in
+`.env` and recreate that service without rebuilding it:
+
+```bash
+sudo docker compose up -d --no-deps --no-build subscription-web
+curl --head "https://admin.vmjamdocuai.cloud/"
 ```
 
 ## Useful Operations
 
 ```bash
 # Recent logs
-sudo docker compose logs --tail=200 api web
+sudo docker compose logs --tail=200 api web subscription-web
 
 # Restart application containers
-sudo docker compose restart api web
+sudo docker compose restart api web subscription-web
 
 # Show container and health state
 sudo docker compose ps

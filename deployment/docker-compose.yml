@@ -32,6 +32,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      SWAGGER_ENABLED: 'false'
       PORT: 3100
       TRUST_PROXY: 'true'
       DATABASE_URL: ${DATABASE_URL}
@@ -53,7 +54,7 @@ services:
       STORE_SCHEMA_MAX_VERSION: ${STORE_SCHEMA_MAX_VERSION:-27}
       STORE_CLIENT_CACHE_MAX: ${STORE_CLIENT_CACHE_MAX:-25}
       STORE_CLIENT_IDLE_MILLISECONDS: ${STORE_CLIENT_IDLE_MILLISECONDS:-600000}
-      CORS_ORIGINS: https://${DOMAIN},tauri://localhost,http://tauri.localhost,https://tauri.localhost
+      CORS_ORIGINS: https://${OWNER_DOMAIN},https://${ADMIN_DOMAIN},tauri://localhost,http://tauri.localhost,https://tauri.localhost
       PLATFORM_BACKUP_ROOT: /app/backups
       PLATFORM_BACKUP_RETAIN_DAYS: ${PLATFORM_BACKUP_RETAIN_DAYS:-30}
       POSTGRES_BIN: /usr/bin
@@ -109,6 +110,30 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  subscription-web:
+    image: posv2-subscriptions-web:${SUBSCRIPTION_WEB_IMAGE_TAG:-latest}
+    build:
+      context: ../../subscriptionapp-posv2
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${SUBSCRIPTION_WEB_HOST_PORT:-3202}:8080'
+    expose:
+      - '8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+
   caddy:
     image: caddy:2-alpine
     profiles:
@@ -119,8 +144,11 @@ services:
         condition: service_healthy
       web:
         condition: service_healthy
+      subscription-web:
+        condition: service_healthy
     environment:
-      DOMAIN: ${DOMAIN}
+      OWNER_DOMAIN: ${OWNER_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     ports:
       - '80:80'
