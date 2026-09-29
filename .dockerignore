@@ -7,5 +7,6 @@ playwright-report
 .gitignore
 docs
 e2e
-scripts
+scripts/*
+!scripts/write-build-info.mjs
 *.log
