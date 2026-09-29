@@ -12,6 +12,8 @@ RUN npm run build
 
 FROM nginx:stable-alpine AS runtime
 
+RUN apk upgrade --no-cache libexpat
+
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/ownerdashboard-posv2/browser /usr/share/nginx/html
