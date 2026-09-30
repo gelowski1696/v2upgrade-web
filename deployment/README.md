@@ -46,7 +46,7 @@ sudo chown "$USER":"$USER" /opt/posv2
 cd /opt/posv2
 git clone git@github.com:gelowski1696/v2upgrade-api.git subsapi
 git clone git@github.com:gelowski1696/v2upgrade-web.git ownerdashboard-posv2
-git clone YOUR_SUBSCRIPTION_APP_REPOSITORY subscriptionapp-posv2
+git clone git@github.com:gelowski1696/v2upgrade-subscriptionapp.git subscriptionapp-posv2
 ```
 
 The resulting paths are `/opt/posv2/subsapi`, `/opt/posv2/ownerdashboard-posv2`, and
