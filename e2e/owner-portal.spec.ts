@@ -63,11 +63,21 @@ test('emits only allowlisted, normalized owner dashboard analytics', async ({ pa
   await mockReports(page, async (request) => {
     const url = new URL(request.url());
     if (request.method() === 'GET' && url.pathname.endsWith('/portal/analytics/configuration')) {
-      return { json: { enabled: true, maximumBatchSize: 25, retentionDays: 90 } };
+      return {
+        json: {
+          enabled: true,
+          realUserMonitoringEnabled: true,
+          maximumBatchSize: 25,
+          retentionDays: 90,
+        },
+      };
     }
     if (request.method() === 'POST' && url.pathname.endsWith('/portal/analytics/events')) {
       batches.push(request.postDataJSON() as { events: Array<Record<string, unknown>> });
       return { status: 202, json: { enabled: true, accepted: 2 } };
+    }
+    if (request.method() === 'GET' && url.pathname.endsWith('/sales')) {
+      return { status: 503, json: { message: 'Temporarily unavailable' } };
     }
     return undefined;
   });
@@ -91,6 +101,12 @@ test('emits only allowlisted, normalized owner dashboard analytics', async ({ pa
         route: '/dashboard/sales',
       }),
       expect.objectContaining({ type: 'PAGE_VIEW', route: '/dashboard/sales' }),
+      expect.objectContaining({
+        type: 'API_FAILURE',
+        operation: 'LOAD_REPORT',
+        httpStatus: 503,
+        errorCode: 'API_HTTP_503',
+      }),
     ]),
   );
   expect(JSON.stringify(events)).not.toContain('customer=must-not-be-collected');

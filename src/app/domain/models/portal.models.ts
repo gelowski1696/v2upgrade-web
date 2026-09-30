@@ -60,8 +60,12 @@ export type WebAnalyticsFeature =
 
 export type WebVitalName = 'LCP' | 'INP' | 'CLS';
 
+export type WebAnalyticsOperation =
+  'SESSION_RESTORE' | 'LOAD_STORES' | 'LOAD_REPORT' | 'EXPORT_REPORT' | 'UPDATE_PREFERENCE';
+
 export interface WebAnalyticsConfiguration {
   enabled: boolean;
+  realUserMonitoringEnabled: boolean;
   maximumBatchSize: number;
   retentionDays: number;
 }
@@ -73,7 +77,9 @@ export interface WebAnalyticsEvent {
   route: string;
   storeId?: string;
   feature?: WebAnalyticsFeature;
+  operation?: WebAnalyticsOperation;
   errorCode?: string;
+  httpStatus?: number;
   metricName?: WebVitalName;
   metricValue?: number;
   appRelease: string;

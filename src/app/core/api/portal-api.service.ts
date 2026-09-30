@@ -9,7 +9,9 @@ import {
   PortalUser,
   WebAnalyticsConfiguration,
   WebAnalyticsEvent,
+  WebAnalyticsOperation,
 } from '../../domain/models/portal.models';
+import { AnalyticsEventBus } from '../analytics/analytics-event-bus';
 import {
   ReportFilters,
   SalesTrendGrouping,
@@ -29,7 +31,10 @@ export class PortalApiService {
   webRelease = 'development';
   apiRelease = 'unavailable';
 
-  constructor(private readonly http: HttpClient) {
+  constructor(
+    private readonly http: HttpClient,
+    private readonly analyticsEvents: AnalyticsEventBus,
+  ) {
     this.removeLegacySession();
     void this.loadReleaseInfo();
   }
@@ -473,9 +478,11 @@ export class PortalApiService {
           return this.authorized<T>(method, path, body, false);
         } catch (refreshError) {
           this.clearSession();
+          this.captureApiFailure(path, error);
           throw refreshError;
         }
       }
+      this.captureApiFailure(path, error);
       throw error;
     }
   }
@@ -514,12 +521,30 @@ export class PortalApiService {
     localStorage.removeItem('posv2.portalRefreshToken');
     localStorage.removeItem('posv2.portalUser');
   }
+  private captureApiFailure(path: string, error: unknown): void {
+    if (path.startsWith('/portal/analytics/')) return;
+    const responseStatus =
+      error instanceof HttpErrorResponse && error.status >= 400 ? error.status : 599;
+    const status = Math.min(599, responseStatus);
+    this.analyticsEvents.apiFailure({
+      operation: analyticsOperation(path),
+      httpStatus: status,
+      errorCode: status === 599 ? 'NETWORK_FAILURE' : `API_HTTP_${status}`,
+    });
+  }
   private webPost<T>(path: string, body: unknown) {
     return this.http.post<T>(`${this.baseUrl}${path}`, body, {
       withCredentials: true,
       headers: { 'X-POSV2-CSRF': '1' },
     });
   }
+}
+
+function analyticsOperation(path: string): WebAnalyticsOperation {
+  if (path === '/portal/stores') return 'LOAD_STORES';
+  if (path.includes('/exports/')) return 'EXPORT_REPORT';
+  if (path.includes('/preferences')) return 'UPDATE_PREFERENCE';
+  return 'LOAD_REPORT';
 }
 
 function defaultPortalApiUrl(): string {

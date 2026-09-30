@@ -5,6 +5,8 @@ import {
   type WebAnalyticsFeature,
   type WebVitalName,
 } from '../../domain/models/portal.models';
+import { AnalyticsEventBus } from './analytics-event-bus';
+import type { Subscription } from 'rxjs';
 
 const flushIntervalMs = 10_000;
 const maximumQueueSize = 50;
@@ -12,6 +14,7 @@ const maximumQueueSize = 50;
 @Injectable({ providedIn: 'root' })
 export class WebAnalyticsCollector implements OnDestroy {
   private enabled = false;
+  private realUserMonitoringEnabled = false;
   private started = false;
   private flushing = false;
   private currentRoute = '/dashboard/overview';
@@ -20,6 +23,7 @@ export class WebAnalyticsCollector implements OnDestroy {
   private queue: WebAnalyticsEvent[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private observers: PerformanceObserver[] = [];
+  private readonly apiFailureSubscription: Subscription;
   private latestLcp: number | null = null;
   private latestInp: number | null = null;
   private cumulativeCls = 0;
@@ -31,7 +35,15 @@ export class WebAnalyticsCollector implements OnDestroy {
     if (document.visibilityState === 'hidden') this.handlePageHide();
   };
 
-  constructor(private readonly api: PortalApiService) {}
+  constructor(
+    private readonly api: PortalApiService,
+    eventBus: AnalyticsEventBus,
+  ) {
+    this.apiFailureSubscription = eventBus.apiFailures.subscribe((failure) => {
+      if (!this.realUserMonitoringEnabled) return;
+      this.enqueue('API_FAILURE', failure);
+    });
+  }
 
   async start(route: string, storeId = ''): Promise<void> {
     this.currentRoute = normalizeRoute(route);
@@ -45,9 +57,10 @@ export class WebAnalyticsCollector implements OnDestroy {
     try {
       const configuration = await this.api.analyticsConfiguration();
       this.enabled = configuration.enabled;
+      this.realUserMonitoringEnabled = configuration.realUserMonitoringEnabled;
       this.maximumBatchSize = Math.min(25, Math.max(1, configuration.maximumBatchSize || 25));
       if (!this.enabled) return;
-      this.observeWebVitals();
+      if (this.realUserMonitoringEnabled) this.observeWebVitals();
       window.addEventListener('pagehide', this.handlePageHide);
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
       this.flushTimer = setInterval(() => void this.flush(), flushIntervalMs);
@@ -61,6 +74,7 @@ export class WebAnalyticsCollector implements OnDestroy {
     this.captureWebVitals();
     void this.flush();
     this.enabled = false;
+    this.realUserMonitoringEnabled = false;
     this.started = false;
     this.queue = [];
     if (this.flushTimer) clearInterval(this.flushTimer);
@@ -73,6 +87,7 @@ export class WebAnalyticsCollector implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stop();
+    this.apiFailureSubscription.unsubscribe();
   }
 
   pageView(route: string, storeId = ''): void {
@@ -92,6 +107,7 @@ export class WebAnalyticsCollector implements OnDestroy {
   }
 
   frontendError(): void {
+    if (!this.realUserMonitoringEnabled) return;
     this.enqueue('FRONTEND_ERROR', { errorCode: 'UNHANDLED_FRONTEND_ERROR' });
   }
 
@@ -168,6 +184,7 @@ export class WebAnalyticsCollector implements OnDestroy {
   }
 
   private captureWebVitals(): void {
+    if (!this.realUserMonitoringEnabled) return;
     if (this.latestLcp !== null) this.webVital('LCP', this.latestLcp);
     if (this.latestInp !== null) this.webVital('INP', this.latestInp);
     if (this.cumulativeCls > 0) this.webVital('CLS', this.cumulativeCls);
