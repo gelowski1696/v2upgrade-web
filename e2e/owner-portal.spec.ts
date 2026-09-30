@@ -57,6 +57,46 @@ test('meets the automated accessibility baseline on the dashboard', async ({ pag
   expect(results.violations.length, formatAccessibilityViolations(results.violations)).toBe(0);
 });
 
+test('emits only allowlisted, normalized owner dashboard analytics', async ({ page }) => {
+  await seedSession(page);
+  const batches: Array<{ events: Array<Record<string, unknown>> }> = [];
+  await mockReports(page, async (request) => {
+    const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/analytics/configuration')) {
+      return { json: { enabled: true, maximumBatchSize: 25, retentionDays: 90 } };
+    }
+    if (request.method() === 'POST' && url.pathname.endsWith('/portal/analytics/events')) {
+      batches.push(request.postDataJSON() as { events: Array<Record<string, unknown>> });
+      return { status: 202, json: { enabled: true, accepted: 2 } };
+    }
+    return undefined;
+  });
+
+  await page.goto('/?customer=must-not-be-collected');
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+  await navigateToReport(page, 'Sales');
+  await expect(page.getByRole('heading', { name: 'Sales' })).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
+
+  await expect
+    .poll(() => batches.flatMap((batch) => batch.events).length)
+    .toBeGreaterThanOrEqual(3);
+  const events = batches.flatMap((batch) => batch.events);
+  expect(events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: 'PAGE_VIEW', route: '/dashboard/overview' }),
+      expect.objectContaining({
+        type: 'FEATURE_USED',
+        feature: 'REPORT_OPENED',
+        route: '/dashboard/sales',
+      }),
+      expect.objectContaining({ type: 'PAGE_VIEW', route: '/dashboard/sales' }),
+    ]),
+  );
+  expect(JSON.stringify(events)).not.toContain('customer=must-not-be-collected');
+  expect(JSON.stringify(events)).not.toContain(user.username);
+});
+
 test('activates a portal account and opens the synchronized overview', async ({ page }) => {
   await mockReports(page, async (request) => {
     if (request.method() === 'POST' && request.url().endsWith('/portal/auth/web/activate')) {
@@ -2626,6 +2666,12 @@ async function mockReports(
     }
     if (request.method() === 'GET' && url.pathname.endsWith('/portal/stores')) {
       await route.fulfill(response({ json: [store] }));
+      return;
+    }
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/analytics/configuration')) {
+      await route.fulfill(
+        response({ json: { enabled: false, maximumBatchSize: 25, retentionDays: 90 } }),
+      );
       return;
     }
     if (request.method() === 'GET' && url.pathname.endsWith('/overview')) {

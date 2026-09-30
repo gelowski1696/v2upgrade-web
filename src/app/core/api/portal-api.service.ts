@@ -7,6 +7,8 @@ import {
   PortalSession,
   PortalStore,
   PortalUser,
+  WebAnalyticsConfiguration,
+  WebAnalyticsEvent,
 } from '../../domain/models/portal.models';
 import {
   ReportFilters,
@@ -112,6 +114,14 @@ export class PortalApiService {
 
   stores(): Promise<PortalStore[]> {
     return this.get<PortalStore[]>('/portal/stores');
+  }
+  analyticsConfiguration(): Promise<WebAnalyticsConfiguration> {
+    return this.get<WebAnalyticsConfiguration>('/portal/analytics/configuration');
+  }
+  submitAnalyticsEvents(
+    events: WebAnalyticsEvent[],
+  ): Promise<{ enabled: boolean; accepted: number }> {
+    return this.authorized('POST', '/portal/analytics/events', { events });
   }
   overview<T>(storeId: string, from: string, to: string): Promise<FreshResponse<T>> {
     return this.get(`/portal/stores/${storeId}/overview?from=${from}&to=${to}`);
@@ -472,16 +482,10 @@ export class PortalApiService {
 
   private async refresh(concurrentRetries = 2): Promise<void> {
     try {
-      const result = await firstValueFrom(
-        this.webPost<AuthResult>('/portal/auth/web/refresh', {}),
-      );
+      const result = await firstValueFrom(this.webPost<AuthResult>('/portal/auth/web/refresh', {}));
       this.saveSession(result);
     } catch (error) {
-      if (
-        concurrentRetries > 0 &&
-        error instanceof HttpErrorResponse &&
-        error.status === 409
-      ) {
+      if (concurrentRetries > 0 && error instanceof HttpErrorResponse && error.status === 409) {
         await new Promise((resolve) => setTimeout(resolve, 150));
         return this.refresh(concurrentRetries - 1);
       }

@@ -27,6 +27,7 @@ import {
   LucideX,
 } from '@lucide/angular';
 import { PortalApiService } from '../../core/api/portal-api.service';
+import { WebAnalyticsCollector } from '../../core/analytics/web-analytics.collector';
 import { FreshResponse, PortalStore } from '../../domain/models/portal.models';
 import {
   BusinessOverviewData,
@@ -320,11 +321,15 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   constructor(
     readonly api: PortalApiService,
     private readonly changeDetector: ChangeDetectorRef,
+    private readonly analytics: WebAnalyticsCollector,
   ) {}
   async ngOnInit(): Promise<void> {
     const restored = await this.api.restoreSession();
     this.sessionInitializing = false;
-    if (restored) await this.loadStores();
+    if (restored) {
+      await this.loadStores();
+      void this.analytics.start(this.analyticsRoute(), this.selectedStoreId);
+    }
     this.changeDetector.detectChanges();
   }
   ngOnDestroy(): void {
@@ -337,6 +342,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.inventoryHistoryRequest += 1;
     this.dataQualityRequest += 1;
     this.transferDetailsRequest += 1;
+    this.analytics.stop();
     this.unlockDocumentScroll();
   }
   get selectedStore(): PortalStore | null {
@@ -593,6 +599,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       }
       this.password = '';
       await this.loadStores();
+      void this.analytics.start(this.analyticsRoute(), this.selectedStoreId);
     } catch (error) {
       this.authError = this.message(
         error,
@@ -610,6 +617,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.password = '';
   }
   async logout(): Promise<void> {
+    this.analytics.stop();
     this.reportRequest += 1;
     this.trendRequest += 1;
     this.receivablesRequest += 1;
@@ -689,6 +697,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (view !== 'overview') this.salesTrendResponse = null;
     if (view !== 'balances') this.receivablesResponse = null;
     await this.loadView();
+    this.analytics.feature('REPORT_OPENED', this.analyticsRoute(), this.selectedStoreId);
+    this.analytics.pageView(this.analyticsRoute(), this.selectedStoreId);
   }
   async changeStore(): Promise<void> {
     this.trendRequest += 1;
@@ -711,6 +721,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.activeView = 'overview';
     }
     await this.loadView();
+    this.analytics.feature('STORE_CHANGED', this.analyticsRoute(), this.selectedStoreId);
+    this.analytics.pageView(this.analyticsRoute(), this.selectedStoreId);
   }
   async changePage(direction: number): Promise<void> {
     const next = this.page + direction;
@@ -723,6 +735,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.page = 1;
     if (this.activeView === 'inventory-summary') this.ensureInventorySummaryDate(true);
     await this.loadView();
+    this.analytics.feature('DATE_RANGE_CHANGED', this.analyticsRoute(), this.selectedStoreId);
   }
   async changeActivityFilter(): Promise<void> {
     this.page = 1;
@@ -768,6 +781,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     }
     this.page = 1;
     await this.loadView();
+    this.analytics.feature('FILTER_APPLIED', this.analyticsRoute(), this.selectedStoreId);
   }
   async clearFilters(): Promise<void> {
     this.resetFilters();
@@ -886,6 +900,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.response = null;
       window.scrollTo(0, 0);
       await this.loadView();
+      this.analytics.feature('SAVED_VIEW_USED', this.analyticsRoute(), this.selectedStoreId);
+      this.analytics.pageView(this.analyticsRoute(), this.selectedStoreId);
     } catch (error) {
       this.preferenceError = this.message(error, 'The saved view could not be opened.');
     } finally {
@@ -1465,6 +1481,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   async exportCurrentReport(): Promise<void> {
     if (!this.selectedStoreId || !this.canExport || this.exporting) return;
     this.exporting = true;
+    let exportSucceeded = false;
     this.clearExportFeedback();
     const report = this.activeView === 'balances' ? 'customer-balances' : this.activeView;
     try {
@@ -1512,6 +1529,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         ];
         this.downloadLocalCsv(`inventory-summary-${this.inventorySummaryDate}.csv`, rows);
         this.exportStatus = `Exported ${data.rows.length} ${data.rows.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
         return;
       }
       if (this.activeView === 'financial-report' && this.financialReport) {
@@ -1562,6 +1580,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         ];
         this.downloadLocalCsv(`financial-report-${this.from}-to-${this.to}.csv`, rows);
         this.exportStatus = `Exported ${data.productRows.length} ${data.productRows.length === 1 ? 'product' : 'products'}.`;
+        exportSucceeded = true;
         return;
       }
       if (this.activeView === 'discount-report' && this.discountReport) {
@@ -1583,6 +1602,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ]),
         ]);
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
         return;
       }
       if (this.activeView === 'purchase-report' && this.purchaseReport) {
@@ -1604,6 +1624,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ]),
         ]);
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
         return;
       }
       if (this.activeView === 'special-receipts' && this.specialReceiptReport) {
@@ -1625,6 +1646,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ]),
         ]);
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
         return;
       }
       if (this.activeView === 'customer-report' && this.customerReport) {
@@ -1645,6 +1667,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ]),
         ]);
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
         return;
       }
       const response = await this.api.exportReport<ReportExportData>(
@@ -1658,9 +1681,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.exportStatus = `Exported ${response.data.rowCount} ${
         response.data.rowCount === 1 ? 'record' : 'records'
       }.`;
+      exportSucceeded = true;
     } catch (error) {
       this.exportError = this.message(error, 'The CSV export could not be created.');
     } finally {
+      if (exportSucceeded) {
+        this.analytics.feature('REPORT_EXPORTED', this.analyticsRoute(), this.selectedStoreId);
+      }
       this.exporting = false;
       this.changeDetector.detectChanges();
     }
@@ -2373,6 +2400,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.preferenceError = '';
     this.preferenceStatus = '';
     this.resetPreferencesConfirming = false;
+  }
+  private analyticsRoute(view: ReportView = this.activeView): string {
+    return `/dashboard/${view}`;
   }
   private numberValue(value: unknown): number {
     const number = Number(value ?? 0);
