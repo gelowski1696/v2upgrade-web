@@ -89,6 +89,25 @@ Required changes:
    port is already occupied.
 7. Set `SUBSCRIPTION_WEB_IMAGE_TAG` to a unique release identifier such as the release date or Git
    commit.
+8. For Social Hub, generate `SOCIAL_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32` and
+   `META_WEBHOOK_VERIFY_TOKEN` with `openssl rand -hex 32`. Add the Meta App ID and newly revealed
+   App Secret, and keep the OAuth redirect on the public HTTPS API URL. Gemini is optional.
+
+The Social Hub production values are:
+
+```text
+SOCIAL_TOKEN_ENCRYPTION_KEY=<base64 encoded 32-byte key>
+META_APP_ID=<Meta app ID>
+META_APP_SECRET=<Meta app secret>
+META_GRAPH_VERSION=v26.0
+META_OAUTH_REDIRECT_URL=https://vmjamdocuai.cloud/api/v1/social/meta/oauth/callback
+META_WEBHOOK_VERIFY_TOKEN=<random verification token>
+GEMINI_API_KEY=<optional>
+GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+If any credential is pasted into chat, an issue tracker, logs, or another untrusted location,
+rotate it before deployment. Never use HTTP for the production OAuth redirect.
 
 Do not commit or share `ownerdashboard-posv2/deployment/.env`.
 
