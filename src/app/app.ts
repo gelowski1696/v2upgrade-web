@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
-import { OwnerDashboardComponent } from './features/dashboard/owner-dashboard.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [OwnerDashboardComponent],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
