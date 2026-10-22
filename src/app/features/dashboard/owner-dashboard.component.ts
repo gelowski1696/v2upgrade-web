@@ -348,6 +348,22 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   get selectedStore(): PortalStore | null {
     return this.stores.find((store) => store.id === this.selectedStoreId) ?? null;
   }
+  get storeGroups(): Array<{ clientId: string; clientName: string; stores: PortalStore[] }> {
+    const groups = new Map<
+      string,
+      { clientId: string; clientName: string; stores: PortalStore[] }
+    >();
+    for (const store of this.stores) {
+      const current = groups.get(store.client.id) ?? {
+        clientId: store.client.id,
+        clientName: store.client.businessName,
+        stores: [],
+      };
+      current.stores.push(store);
+      groups.set(store.client.id, current);
+    }
+    return [...groups.values()];
+  }
   get navigation(): Array<{ key: ReportView; label: string; icon: string }> {
     const reports = [...this.baseNavigation];
     const insertAt = reports.findIndex((item) => item.key === 'business');
@@ -661,7 +677,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.error = '';
     try {
       this.stores = await this.api.stores();
-      this.selectedStoreId = this.stores[0]?.id ?? '';
+      const rememberedStoreId = localStorage.getItem('posv2.portalStoreId') ?? '';
+      this.selectedStoreId = this.stores.some((store) => store.id === rememberedStoreId)
+        ? rememberedStoreId
+        : (this.stores[0]?.id ?? '');
       if (this.selectedStoreId) {
         await this.loadReportCapabilities();
         await this.loadDashboardPreferences();
@@ -701,6 +720,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.analytics.pageView(this.analyticsRoute(), this.selectedStoreId);
   }
   async changeStore(): Promise<void> {
+    if (this.selectedStoreId) {
+      localStorage.setItem('posv2.portalStoreId', this.selectedStoreId);
+    }
     this.trendRequest += 1;
     this.receivablesRequest += 1;
     this.dismissSaleDetails(false);

@@ -15,6 +15,11 @@ export interface PortalStore {
   code: string;
   name: string;
   timezone: string;
+  client: {
+    id: string;
+    code: string;
+    businessName: string;
+  };
   activeSnapshot: {
     schemaVersion: number;
     snapshotCreatedAt: string;

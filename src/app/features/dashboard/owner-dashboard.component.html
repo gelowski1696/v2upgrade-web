@@ -214,7 +214,11 @@
               [(ngModel)]="selectedStoreId"
               (ngModelChange)="changeStore()"
             >
-              <option *ngFor="let store of stores" [value]="store.id">{{ store.name }}</option>
+              <optgroup *ngFor="let group of storeGroups" [label]="group.clientName">
+                <option *ngFor="let store of group.stores" [value]="store.id">
+                  {{ store.name }} · {{ store.code }}
+                </option>
+              </optgroup>
             </select>
           </label>
         </div>
