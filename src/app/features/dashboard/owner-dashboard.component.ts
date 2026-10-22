@@ -348,21 +348,21 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   get selectedStore(): PortalStore | null {
     return this.stores.find((store) => store.id === this.selectedStoreId) ?? null;
   }
-  get storeGroups(): Array<{ clientId: string; clientName: string; stores: PortalStore[] }> {
-    const groups = new Map<
-      string,
-      { clientId: string; clientName: string; stores: PortalStore[] }
-    >();
+  get storeGroups(): Array<{ groupId: string; groupName: string; stores: PortalStore[] }> {
+    const groups = new Map<string, { groupId: string; groupName: string; stores: PortalStore[] }>();
     for (const store of this.stores) {
-      const current = groups.get(store.client.id) ?? {
-        clientId: store.client.id,
-        clientName: store.client.businessName,
+      const key = store.client.group?.id ?? `client:${store.client.id}`;
+      const current = groups.get(key) ?? {
+        groupId: key,
+        groupName: store.client.group?.name ?? 'Individual stores',
         stores: [],
       };
       current.stores.push(store);
-      groups.set(store.client.id, current);
+      groups.set(key, current);
     }
-    return [...groups.values()];
+    return [...groups.values()].sort((left, right) =>
+      left.groupName.localeCompare(right.groupName),
+    );
   }
   get navigation(): Array<{ key: ReportView; label: string; icon: string }> {
     const reports = [...this.baseNavigation];

@@ -19,6 +19,11 @@ export interface PortalStore {
     id: string;
     code: string;
     businessName: string;
+    group: {
+      id: string;
+      code: string;
+      name: string;
+    } | null;
   };
   activeSnapshot: {
     schemaVersion: number;
