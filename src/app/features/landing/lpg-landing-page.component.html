@@ -1,0 +1,314 @@
+<a class="skip-link" href="#landing-main">Skip to main content</a>
+
+<header class="landing-nav" [class.is-scrolled]="scrolled">
+  <a class="landing-brand" href="#top" aria-label="VMJAM Sales LPG Owner Dashboard home">
+    <span class="landing-brand-mark" aria-hidden="true">V</span>
+    <span>
+      <strong>VMJAM SALES</strong>
+      <small>LPG Owner Dashboard</small>
+    </span>
+  </a>
+
+  <nav aria-label="Public navigation" [class.is-open]="mobileMenuOpen">
+    <a href="#how-it-works" (click)="mobileMenuOpen = false">How it works</a>
+    <a href="#owner-view" (click)="mobileMenuOpen = false">What you can see</a>
+    <a href="#trust" (click)="mobileMenuOpen = false">Why owners trust it</a>
+  </nav>
+
+  <div class="landing-nav-actions">
+    <button
+      class="motion-toggle"
+      type="button"
+      [attr.aria-pressed]="motionEnabled"
+      [attr.aria-label]="motionEnabled ? 'Pause 3D animation' : 'Enable 3D animation'"
+      (click)="toggleMotion()"
+    >
+      <svg *ngIf="motionEnabled" lucidePause aria-hidden="true"></svg>
+      <svg *ngIf="!motionEnabled" lucidePlay aria-hidden="true"></svg>
+      <span>{{ motionEnabled ? 'Pause motion' : 'Enable motion' }}</span>
+    </button>
+    <button class="nav-sign-in" type="button" aria-label="Open owner access" (click)="focusAuth()">
+      Sign in
+    </button>
+    <button
+      class="menu-toggle"
+      type="button"
+      [attr.aria-expanded]="mobileMenuOpen"
+      aria-label="Toggle navigation"
+      (click)="mobileMenuOpen = !mobileMenuOpen"
+    >
+      <svg *ngIf="!mobileMenuOpen" lucideMenu aria-hidden="true"></svg>
+      <svg *ngIf="mobileMenuOpen" lucideX aria-hidden="true"></svg>
+    </button>
+  </div>
+</header>
+
+<main id="landing-main" class="landing-main">
+  <section #story id="top" class="story-world" aria-label="The LPG business journey">
+    <div class="world-stage" aria-hidden="true">
+      <app-lpg-world #world [reducedMotion]="!motionEnabled" />
+      <div class="world-vignette"></div>
+      <div class="world-grid"></div>
+    </div>
+
+    <section class="story-chapter hero-chapter" aria-labelledby="landing-title">
+      <div class="hero-copy chapter-copy">
+        <p class="eyebrow">VMJAM SALES / OWNER PORTAL</p>
+        <h1 id="landing-title">Your LPG business,<br />in one clear view.</h1>
+        <p class="hero-lede">
+          Review sales, filled and empty stock, restocks, cash flow, balances, and branch
+          performance from the latest Sales synchronization.
+        </p>
+        <div class="hero-actions">
+          <button
+            class="gold-action"
+            type="button"
+            aria-label="Open owner access"
+            (click)="focusAuth()"
+          >
+            Sign in to owner dashboard
+            <svg lucideArrowRight aria-hidden="true"></svg>
+          </button>
+          <button class="quiet-action" type="button" (click)="scrollToStory()">
+            See how it works
+            <svg lucideArrowDown aria-hidden="true"></svg>
+          </button>
+        </div>
+        <p class="trust-line">
+          <svg lucideCheck aria-hidden="true"></svg>
+          Read-only. Store-scoped. Synced from your Sales.
+        </p>
+      </div>
+
+      <aside id="owner-access" class="owner-access" aria-labelledby="auth-heading">
+        <form (ngSubmit)="authenticate()" [attr.aria-busy]="authBusy">
+          <header>
+            <span>
+              {{
+                authMode === 'login'
+                  ? 'OWNER ACCESS'
+                  : authMode === 'activate'
+                    ? 'ACCOUNT ACTIVATION'
+                    : 'PASSWORD RECOVERY'
+              }}
+            </span>
+            <h2 id="auth-heading">
+              {{
+                authMode === 'login'
+                  ? 'Sign in'
+                  : authMode === 'activate'
+                    ? 'Activate web access'
+                    : 'Reset password'
+              }}
+            </h2>
+            <p>
+              {{
+                authMode === 'login'
+                  ? 'Use the account created from the Sales application.'
+                  : authMode === 'activate'
+                    ? 'Enter the one-time activation token from your store administrator.'
+                    : 'Enter the password reset token issued from your Sales application.'
+              }}
+            </p>
+          </header>
+
+          <label *ngIf="authMode === 'login'">
+            <span>Email or username</span>
+            <input
+              #usernameInput
+              name="username"
+              autocomplete="username"
+              [(ngModel)]="username"
+              required
+            />
+          </label>
+
+          <label *ngIf="authMode === 'activate'">
+            <span>Activation token</span>
+            <input name="token" autocomplete="off" [(ngModel)]="activationToken" required />
+          </label>
+
+          <label *ngIf="authMode === 'reset'">
+            <span>Password reset token</span>
+            <input name="resetToken" autocomplete="off" [(ngModel)]="resetToken" required />
+          </label>
+
+          <label>
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              [attr.autocomplete]="authMode === 'login' ? 'current-password' : 'new-password'"
+              [attr.minlength]="authMode === 'login' ? 8 : 12"
+              [(ngModel)]="password"
+              required
+            />
+          </label>
+
+          <p class="form-error" *ngIf="authError" role="alert">
+            <svg lucideCircleAlert aria-hidden="true"></svg>
+            {{ authError }}
+          </p>
+          <p class="form-success" *ngIf="authSuccess" role="status">{{ authSuccess }}</p>
+
+          <button class="auth-submit" type="submit" [disabled]="authBusy">
+            <span>
+              {{
+                authBusy
+                  ? 'Processing'
+                  : authMode === 'login'
+                    ? 'Sign in'
+                    : authMode === 'activate'
+                      ? 'Activate account'
+                      : 'Reset password'
+              }}
+            </span>
+            <svg lucideArrowRight aria-hidden="true"></svg>
+          </button>
+
+          <div class="mode-actions" *ngIf="authMode === 'login'; else returnToLogin">
+            <button type="button" (click)="switchAuthMode('activate')">
+              Activate a new account
+            </button>
+            <button type="button" (click)="switchAuthMode('reset')">Reset password</button>
+          </div>
+          <ng-template #returnToLogin>
+            <button class="return-login" type="button" (click)="switchAuthMode('login')">
+              Return to sign in
+            </button>
+          </ng-template>
+        </form>
+      </aside>
+    </section>
+
+    <section
+      *ngFor="let chapter of chapters.slice(1); trackBy: trackChapter; let index = index"
+      class="story-chapter narrative-chapter"
+      [id]="index === 0 ? 'how-it-works' : null"
+      [class.copy-right]="index % 2 === 0"
+    >
+      <div class="chapter-copy">
+        <span class="chapter-index">{{ chapter.index }} / 07</span>
+        <p>{{ chapter.kicker }}</p>
+        <h2>{{ chapter.title }}</h2>
+        <span [ngSwitch]="index">
+          <ng-container *ngSwitchCase="0">
+            Review confirmed restocks, supplier value, payments, refunds, and remaining payables.
+          </ng-container>
+          <ng-container *ngSwitchCase="1">
+            See store and warehouse quantities, critical stock, movement history, and reorder
+            signals.
+          </ng-container>
+          <ng-container *ngSwitchCase="2">
+            Follow transactions into product performance, recorded cost, margin, and profit.
+          </ng-container>
+          <ng-container *ngSwitchCase="3">
+            Review payment channels, customer balances, aging, and recorded collections.
+          </ng-container>
+          <ng-container *ngSwitchCase="4">
+            Compare authorized stores and focus on stale snapshots, low stock, and overdue balances.
+          </ng-container>
+          <ng-container *ngSwitchDefault>
+            Use synchronized evidence to plan stock, targets, purchasing, and collections.
+          </ng-container>
+        </span>
+      </div>
+    </section>
+  </section>
+
+  <section id="owner-view" class="evidence-section" aria-labelledby="evidence-title">
+    <div class="section-intro">
+      <p class="eyebrow dark">THE VIEW BEHIND THE WORLD</p>
+      <h2 id="evidence-title">From store activity<br />to owner decisions.</h2>
+      <p>
+        The miniature tells the story. The dashboard supplies the evidence from your latest
+        synchronized Sales records.
+      </p>
+    </div>
+
+    <div class="evidence-layout">
+      <div class="evidence-visual">
+        <div class="browser-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+        <img [src]="selectedEvidence.image" [alt]="selectedEvidence.alt" />
+      </div>
+
+      <div class="evidence-rail" role="tablist" aria-label="Dashboard views">
+        <button
+          *ngFor="let item of evidence"
+          type="button"
+          role="tab"
+          [attr.aria-selected]="selectedEvidence.key === item.key"
+          [class.is-active]="selectedEvidence.key === item.key"
+          (click)="selectEvidence(item)"
+        >
+          <small>{{ item.eyebrow }}</small>
+          <strong>{{ item.title }}</strong>
+          <span *ngIf="selectedEvidence.key === item.key">{{ item.description }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust" class="trust-section" aria-labelledby="trust-title">
+    <header>
+      <p class="eyebrow dark">BUILT FOR RESPONSIBLE ACCESS</p>
+      <h2 id="trust-title">Clear where it matters.</h2>
+    </header>
+    <div class="trust-rows">
+      <article>
+        <span>01</span>
+        <h3>Read-only by design</h3>
+        <p>Reporting does not cancel sales, adjust stock, confirm transfers, or record payments.</p>
+      </article>
+      <article>
+        <span>02</span>
+        <h3>Store-scoped access</h3>
+        <p>Each owner account sees only the stores assigned from the Sales platform.</p>
+      </article>
+      <article>
+        <span>03</span>
+        <h3>Freshness stays visible</h3>
+        <p>Every report identifies when its source snapshot was created and synchronized.</p>
+      </article>
+      <article>
+        <span>04</span>
+        <h3>Gaps are disclosed</h3>
+        <p>Missing legacy costs and incomplete records remain visible beside the numbers.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="final-cta" aria-labelledby="final-title">
+    <div>
+      <p class="eyebrow">READY WHEN THE STORE CLOSES. READY BEFORE IT OPENS.</p>
+      <h2 id="final-title">Your next store check<br />can start here.</h2>
+      <p>
+        Sign in to review the latest synchronized LPG business records. Need access? Create an
+        invitation from Settings › Online dashboard in the Sales desktop application.
+      </p>
+    </div>
+    <div class="final-actions">
+      <button
+        class="gold-action"
+        type="button"
+        aria-label="Open owner access"
+        (click)="focusAuth()"
+      >
+        Sign in
+        <svg lucideArrowRight aria-hidden="true"></svg>
+      </button>
+      <button class="text-action" type="button" (click)="switchAuthMode('activate'); focusAuth()">
+        Activate invited account
+      </button>
+    </div>
+  </section>
+</main>
+
+<footer class="landing-footer">
+  <div class="landing-brand">
+    <span class="landing-brand-mark" aria-hidden="true">V</span>
+    <span><strong>VMJAM SALES</strong><small>LPG Owner Dashboard</small></span>
+  </div>
+  <p>Operational changes remain in the Sales desktop application.</p>
+  <a routerLink="/privacy">Privacy policy</a>
+</footer>

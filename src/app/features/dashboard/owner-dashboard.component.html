@@ -4,118 +4,10 @@
 </main>
 
 <ng-container *ngIf="!sessionInitializing">
-<main class="auth-layout" *ngIf="!api.user; else portal">
-  <section class="auth-brand" aria-labelledby="portal-name">
-    <div class="auth-brand-lockup">
-      <span class="brand-mark" aria-hidden="true"><svg lucideActivity></svg></span>
-      <strong>VMJAM SALES</strong>
-    </div>
-
-    <div class="auth-brand-message">
-      <p>OWNER PORTAL</p>
-      <h1 id="portal-name">Your business, clearly reported.</h1>
-      <span>Read-only store reports from the latest POS synchronization.</span>
-    </div>
-
-    <small>Secure store access</small>
-  </section>
-
-  <section class="auth-form-wrap">
-    <form class="auth-form" (ngSubmit)="authenticate()" [attr.aria-busy]="authBusy">
-      <header>
-        <span>
-          {{
-            authMode === 'login'
-              ? 'OWNER ACCESS'
-              : authMode === 'activate'
-                ? 'ACCOUNT ACTIVATION'
-                : 'PASSWORD RECOVERY'
-          }}
-        </span>
-        <h2>
-          {{
-            authMode === 'login'
-              ? 'Sign in'
-              : authMode === 'activate'
-                ? 'Activate web access'
-                : 'Reset password'
-          }}
-        </h2>
-        <p>
-          {{
-            authMode === 'login'
-              ? 'Use the account created from the POS application.'
-              : authMode === 'activate'
-                ? 'Enter the one-time activation token from your store administrator.'
-                : 'Enter the password reset token issued from your POS application.'
-          }}
-        </p>
-      </header>
-
-      <label *ngIf="authMode === 'login'">
-        <span>Email or username</span>
-        <input name="username" autocomplete="username" [(ngModel)]="username" required />
-      </label>
-
-      <label *ngIf="authMode === 'activate'">
-        <span>Activation token</span>
-        <input name="token" autocomplete="off" [(ngModel)]="activationToken" required />
-      </label>
-
-      <label *ngIf="authMode === 'reset'">
-        <span>Password reset token</span>
-        <input name="resetToken" autocomplete="off" [(ngModel)]="resetToken" required />
-      </label>
-
-      <label>
-        <span>Password</span>
-        <input
-          name="password"
-          type="password"
-          [attr.autocomplete]="authMode === 'login' ? 'current-password' : 'new-password'"
-          [attr.minlength]="authMode === 'login' ? 8 : 12"
-          [(ngModel)]="password"
-          required
-        />
-      </label>
-
-      <p class="form-error" *ngIf="authError" role="alert">
-        <svg lucideCircleAlert aria-hidden="true"></svg>
-        {{ authError }}
-      </p>
-      <p class="form-success" *ngIf="authSuccess" role="status">{{ authSuccess }}</p>
-
-      <button class="primary-command" type="submit" [disabled]="authBusy">
-        <span>
-          {{
-            authBusy
-              ? 'Processing'
-              : authMode === 'login'
-                ? 'Sign in'
-                : authMode === 'activate'
-                  ? 'Activate account'
-                  : 'Reset password'
-          }}
-        </span>
-        <svg lucideArrowRight aria-hidden="true"></svg>
-      </button>
-
-      <div class="mode-actions" *ngIf="authMode === 'login'; else returnToLogin">
-        <button class="mode-switch" type="button" (click)="switchAuthMode('activate')">
-          Activate a new account
-        </button>
-        <button class="mode-switch" type="button" (click)="switchAuthMode('reset')">
-          Reset password
-        </button>
-      </div>
-      <ng-template #returnToLogin>
-        <button class="mode-switch" type="button" (click)="switchAuthMode('login')">
-          Return to sign in
-        </button>
-      </ng-template>
-    </form>
-  </section>
-</main>
+<app-lpg-landing-page
+  *ngIf="!api.user; else portal"
+  (authenticated)="handleLandingAuthenticated()"
+/>
 
 <ng-template #portal>
   <main class="portal-shell" [class.menu-open]="sidebarOpen">
@@ -216,7 +108,7 @@
             >
               <optgroup *ngFor="let group of storeGroups" [label]="group.groupName">
                 <option *ngFor="let store of group.stores" [value]="store.id">
-                  {{ store.client.businessName }} · {{ store.code }}
+                  {{ $any(store).client?.businessName || store.name }} · {{ store.code }}
                 </option>
               </optgroup>
             </select>

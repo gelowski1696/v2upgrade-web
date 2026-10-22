@@ -23,6 +23,51 @@ const store = {
   },
 };
 
+test('presents the public LPG story before owner sign in', async ({ page }) => {
+  await mockReports(page, async () => undefined);
+  await page.goto('/');
+
+  await expect(
+    page.getByRole('heading', { name: 'Your LPG business, in one clear view.' }),
+  ).toBeVisible();
+  await expect(page.getByText(/Read-only\. Store-scoped\./)).toBeVisible();
+  await expect(page.locator('app-lpg-world .world-poster')).toBeVisible();
+  await expect(page.locator('app-lpg-world canvas')).toHaveClass(/is-ready/, { timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test('uses the static LPG world when reduced motion is preferred', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockReports(page, async () => undefined);
+  await page.goto('/');
+
+  await expect(page.locator('app-lpg-world .world-poster')).toBeVisible();
+  await expect(page.locator('app-lpg-world canvas')).toBeVisible();
+  await expect(page.locator('app-lpg-world canvas')).toHaveClass(/is-ready/, { timeout: 10_000 });
+  await expect(page.getByText('Building the LPG network')).toHaveCount(0);
+  const enableMotion = page.getByRole('button', { name: 'Enable 3D animation' });
+  await expect(enableMotion).toBeVisible();
+  await expect(enableMotion).toHaveAttribute('aria-pressed', 'false');
+  await enableMotion.click();
+  await expect(page.getByRole('button', { name: 'Pause 3D animation' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Pause 3D animation' }).click();
+  await expect(page.getByRole('button', { name: 'Enable 3D animation' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await page.getByRole('heading', { name: 'Know what came in.' }).scrollIntoViewIfNeeded();
+  await expect(page.locator('app-lpg-world canvas')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'From store activity to owner decisions.' }),
+  ).toBeVisible();
+});
+
 test('meets the automated accessibility baseline on sign in', async ({ page }) => {
   await mockReports(page, async () => undefined);
   await page.goto('/');
@@ -38,7 +83,7 @@ test('keeps the sign-in controls keyboard reachable in order', async ({ page }) 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 
-  await page.keyboard.press('Tab');
+  await page.getByLabel('Email or username').focus();
   await expect(page.getByLabel('Email or username')).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByLabel('Password')).toBeFocused();

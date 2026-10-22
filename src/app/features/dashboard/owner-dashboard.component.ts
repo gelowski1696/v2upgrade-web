@@ -88,6 +88,7 @@ import {
   TransferRecord,
 } from '../../domain/models/report.models';
 import { AccountSecurityComponent } from '../security/account-security.component';
+import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
 
 @Component({
   selector: 'app-owner-dashboard',
@@ -95,6 +96,7 @@ import { AccountSecurityComponent } from '../security/account-security.component
     CommonModule,
     FormsModule,
     AccountSecurityComponent,
+    LpgLandingPageComponent,
     LucideActivity,
     LucideArrowRight,
     LucideBanknote,
@@ -351,10 +353,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   get storeGroups(): Array<{ groupId: string; groupName: string; stores: PortalStore[] }> {
     const groups = new Map<string, { groupId: string; groupName: string; stores: PortalStore[] }>();
     for (const store of this.stores) {
-      const key = store.client.group?.id ?? `client:${store.client.id}`;
+      const key = store.client?.group?.id ?? `client:${store.client?.id ?? store.id}`;
       const current = groups.get(key) ?? {
         groupId: key,
-        groupName: store.client.group?.name ?? 'Individual stores',
+        groupName: store.client?.group?.name ?? 'Individual stores',
         stores: [],
       };
       current.stores.push(store);
@@ -625,6 +627,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.authBusy = false;
       this.changeDetector.detectChanges();
     }
+  }
+  async handleLandingAuthenticated(): Promise<void> {
+    await this.loadStores();
+    void this.analytics.start(this.analyticsRoute(), this.selectedStoreId);
+    this.changeDetector.detectChanges();
   }
   switchAuthMode(mode: 'login' | 'activate' | 'reset'): void {
     this.authMode = mode;

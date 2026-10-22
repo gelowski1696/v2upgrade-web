@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title description">
+  <title id="title">Isometric LPG business network</title>
+  <description id="description">A miniature LPG depot with storage tanks, filled and empty cylinders, delivery vehicles, roads, and retail branches.</description>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efe1ca"/>
+      <stop offset="1" stop-color="#c9bda9"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d8d6cc"/>
+      <stop offset="0.55" stop-color="#8c8d87"/>
+      <stop offset="1" stop-color="#62635f"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <g id="cylinder-filled">
+      <ellipse cx="0" cy="42" rx="16" ry="7" fill="#6d4a09" opacity=".28"/>
+      <path d="M-11 3h22l4 29c1 8-5 12-15 12s-16-4-15-12z" fill="#d79b24"/>
+      <path d="M-6 1v-7h12v7" fill="none" stroke="#5c410d" stroke-width="4"/>
+      <ellipse cx="0" cy="3" rx="11" ry="4" fill="#efb943"/>
+    </g>
+    <g id="cylinder-empty">
+      <ellipse cx="0" cy="42" rx="16" ry="7" fill="#37342f" opacity=".22"/>
+      <path d="M-11 3h22l4 29c1 8-5 12-15 12s-16-4-15-12z" fill="#77736b"/>
+      <path d="M-6 1v-7h12v7" fill="none" stroke="#36332f" stroke-width="4"/>
+      <ellipse cx="0" cy="3" rx="11" ry="4" fill="#9a968c"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <ellipse cx="925" cy="800" rx="600" ry="125" fill="#62533d" opacity=".2" filter="url(#shadow)"/>
+
+  <path d="M420 186 1360 500 922 860 150 492Z" fill="#f6eedf" stroke="#d4c6b2" stroke-width="8"/>
+  <path d="M188 472 905 755 1017 665 295 380Z" fill="#3b3832"/>
+  <path d="m873 776 75 29 414-338-75-27Z" fill="#3b3832"/>
+  <path d="M235 455 914 724" stroke="#d79b24" stroke-width="9" stroke-dasharray="55 38" opacity=".78"/>
+
+  <!-- Supply tanks -->
+  <g transform="translate(590 324) skewY(18)">
+    <ellipse cx="0" cy="20" rx="145" ry="38" fill="#463e34" opacity=".18"/>
+    <rect x="-128" y="-32" width="256" height="64" rx="32" fill="url(#steel)" stroke="#5c5b56" stroke-width="5"/>
+    <path d="M-76 31v44m152-44v44" stroke="#34312d" stroke-width="18"/>
+    <path d="M-146 70h292" stroke="#34312d" stroke-width="12"/>
+    <rect x="-128" y="-22" width="256" height="6" rx="3" fill="#fff" opacity=".35"/>
+  </g>
+  <g transform="translate(676 432) skewY(18) scale(.88)">
+    <rect x="-128" y="-32" width="256" height="64" rx="32" fill="url(#steel)" stroke="#5c5b56" stroke-width="5"/>
+    <path d="M-76 31v44m152-44v44" stroke="#34312d" stroke-width="18"/>
+    <path d="M-146 70h292" stroke="#34312d" stroke-width="12"/>
+  </g>
+
+  <!-- Depot -->
+  <g transform="translate(900 326)">
+    <path d="m-173 15 178-92 206 78-180 100Z" fill="#2a261f"/>
+    <path d="m-173 15 204 86v215l-204-83Z" fill="#27231e"/>
+    <path d="m31 101 180-100v212L31 316Z" fill="#ded2bf"/>
+    <path d="M-190 6 4-97 228-9 31 101Z" fill="#d79b24" stroke="#f1bd50" stroke-width="7"/>
+    <path d="m72 126 94-52v120l-94 52Z" fill="#4a4540"/>
+    <path d="m80 141 78-43" stroke="#8d8982" stroke-width="5"/>
+  </g>
+
+  <!-- Cylinder yards -->
+  <g transform="translate(630 574)">
+    <path d="M-105 25 30-44l126 52-137 72Z" fill="#2c2924" opacity=".17"/>
+    <use href="#cylinder-filled" x="-70" y="-12"/>
+    <use href="#cylinder-filled" x="-25" y="5"/>
+    <use href="#cylinder-filled" x="20" y="23"/>
+    <use href="#cylinder-filled" x="65" y="41"/>
+    <use href="#cylinder-filled" x="-30" y="-34"/>
+    <use href="#cylinder-filled" x="15" y="-16"/>
+    <use href="#cylinder-filled" x="60" y="2"/>
+    <use href="#cylinder-filled" x="105" y="20"/>
+  </g>
+  <g transform="translate(835 655)">
+    <path d="M-105 25 30-44l126 52-137 72Z" fill="#2c2924" opacity=".17"/>
+    <use href="#cylinder-empty" x="-70" y="-12"/>
+    <use href="#cylinder-empty" x="-25" y="5"/>
+    <use href="#cylinder-empty" x="20" y="23"/>
+    <use href="#cylinder-empty" x="65" y="41"/>
+    <use href="#cylinder-empty" x="-30" y="-34"/>
+    <use href="#cylinder-empty" x="15" y="-16"/>
+    <use href="#cylinder-empty" x="60" y="2"/>
+    <use href="#cylinder-empty" x="105" y="20"/>
+  </g>
+
+  <!-- Delivery truck -->
+  <g transform="translate(1100 634) rotate(20)">
+    <ellipse cx="0" cy="58" rx="130" ry="30" fill="#201c16" opacity=".22"/>
+    <rect x="-115" y="-18" width="154" height="70" rx="8" fill="#25221d"/>
+    <path d="M39-4h72l35 34v22H39Z" fill="#d79b24"/>
+    <path d="m67 5 35 2 21 21H67Z" fill="#5d655f"/>
+    <path d="M-106-11h136v49h-136z" fill="none" stroke="#d79b24" stroke-width="7"/>
+    <path d="M-83-8v45m34-45v45m34-45v45" stroke="#d79b24" stroke-width="5"/>
+    <circle cx="-72" cy="56" r="21" fill="#211f1c" stroke="#77736b" stroke-width="7"/>
+    <circle cx="99" cy="56" r="21" fill="#211f1c" stroke="#77736b" stroke-width="7"/>
+  </g>
+
+  <!-- Branches -->
+  <g transform="translate(360 653)">
+    <path d="m-58 0 70-37 80 31-70 39Z" fill="#d79b24"/>
+    <path d="m-58 0 80 33v82l-80-31Z" fill="#29251f"/>
+    <path d="m22 33 70-39v82l-70 39Z" fill="#dfd4c2"/>
+    <circle cx="16" cy="-70" r="12" fill="#d79b24"/>
+    <circle cx="16" cy="-70" r="26" fill="none" stroke="#d79b24" stroke-width="3" opacity=".32"/>
+  </g>
+  <g transform="translate(1134 412) scale(.82)">
+    <path d="m-58 0 70-37 80 31-70 39Z" fill="#d79b24"/>
+    <path d="m-58 0 80 33v82l-80-31Z" fill="#29251f"/>
+    <path d="m22 33 70-39v82l-70 39Z" fill="#dfd4c2"/>
+    <circle cx="16" cy="-70" r="12" fill="#d79b24"/>
+    <circle cx="16" cy="-70" r="26" fill="none" stroke="#d79b24" stroke-width="3" opacity=".32"/>
+  </g>
+
+  <!-- Trees and safety posts -->
+  <g fill="#6a735f">
+    <circle cx="408" cy="342" r="34"/><circle cx="1320" cy="621" r="32"/><circle cx="463" cy="763" r="27"/>
+  </g>
+  <g fill="#403b34">
+    <rect x="402" y="364" width="12" height="44"/><rect x="1314" y="642" width="12" height="44"/><rect x="457" y="781" width="11" height="36"/>
+  </g>
+</svg>
