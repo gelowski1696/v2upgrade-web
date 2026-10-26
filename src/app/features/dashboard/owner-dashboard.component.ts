@@ -1140,7 +1140,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (this.activeView === 'customer-insights') return 'Search customer or contact';
     if (this.activeView === 'transfers') return 'Search reference, supplier, or type';
     if (this.activeView === 'restocks') return 'Search reference or supplier';
-    if (this.activeView === 'customers') return 'Search name, address, contact, or email';
+    if (this.activeView === 'customers') return 'Search name, address, contact, or GAS';
     if (this.activeView === 'personnel') return 'Search name, role, contact, or address';
     return 'Search customer or contact';
   }

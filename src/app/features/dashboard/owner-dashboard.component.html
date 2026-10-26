@@ -3488,7 +3488,7 @@
                     </ng-container>
 
                     <ng-container *ngIf="activeView === 'customers'">
-                      <td><strong>{{ row.name || '-' }}</strong><small>{{ row.email || 'No email' }}</small></td>
+                      <td><strong>{{ row.name || '-' }}</strong><small>{{ row.email || 'No GAS' }}</small></td>
                       <td>{{ row.contact || '-' }}</td>
                       <td>{{ row.address || '-' }}</td>
                       <td><span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span></td>
@@ -5177,7 +5177,7 @@
 
       <dl class="directory-facts">
         <div><dt>Address</dt><dd>{{ customer.address || 'Not recorded' }}</dd></div>
-        <div><dt>Email</dt><dd>{{ customer.email || 'Not recorded' }}</dd></div>
+        <div><dt>GAS</dt><dd>{{ customer.email || 'Not recorded' }}</dd></div>
         <div><dt>Joined</dt><dd>{{ customer.joinedAt ? (customer.joinedAt | date: 'mediumDate') : 'Not recorded' }}</dd></div>
         <div><dt>Balance</dt><dd>{{ formatMoney(customer.balance) }}</dd></div>
         <div><dt>Lent items</dt><dd>{{ customer.lentQuantity || 0 }}</dd></div>
