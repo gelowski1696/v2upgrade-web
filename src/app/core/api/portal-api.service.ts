@@ -288,6 +288,47 @@ export class PortalApiService {
       `/portal/stores/${encodeURIComponent(storeId)}/customers/${encodeURIComponent(String(customerId))}/purchase-history?${query.toString()}`,
     );
   }
+  customers<T>(
+    storeId: string,
+    page = 1,
+    filters: ReportFilters = {},
+  ): Promise<FreshResponse<T>> {
+    const query = this.reportQuery('', '', filters);
+    query.set('page', String(page));
+    query.set('pageSize', '25');
+    return this.get(
+      `/portal/stores/${encodeURIComponent(storeId)}/customers?${query.toString()}`,
+    );
+  }
+  personnel<T>(
+    storeId: string,
+    page = 1,
+    filters: ReportFilters = {},
+  ): Promise<FreshResponse<T>> {
+    const query = this.reportQuery('', '', filters);
+    query.set('page', String(page));
+    query.set('pageSize', '25');
+    return this.get(
+      `/portal/stores/${encodeURIComponent(storeId)}/personnel?${query.toString()}`,
+    );
+  }
+  customerLendHistory<T>(
+    storeId: string,
+    customerId: number,
+    from: string,
+    to: string,
+    page = 1,
+  ): Promise<FreshResponse<T>> {
+    const query = new URLSearchParams({
+      from,
+      to,
+      page: String(page),
+      pageSize: '25',
+    });
+    return this.get(
+      `/portal/stores/${encodeURIComponent(storeId)}/customers/${encodeURIComponent(String(customerId))}/lend-history?${query.toString()}`,
+    );
+  }
   cashFlow<T>(storeId: string, from: string, to: string): Promise<FreshResponse<T>> {
     return this.get(`/portal/stores/${storeId}/cash-flow?from=${from}&to=${to}`);
   }

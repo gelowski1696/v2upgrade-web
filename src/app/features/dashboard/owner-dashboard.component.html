@@ -239,7 +239,7 @@
                 [attr.title]="exporting ? 'Creating export' : 'Export all matching records'"
                 [attr.aria-label]="exporting ? 'Creating export' : 'Export report'"
                 [disabled]="loading || exporting || !response"
-                (click)="exportFormatOpen = true"
+                (click)="openExportDialog()"
               >
                 <svg [class.spin]="exporting" lucideDownload aria-hidden="true"></svg>
                 <span>{{ exporting ? 'Exporting' : 'Export' }}</span>
@@ -308,6 +308,15 @@
               <option *ngFor="let status of pagedData?.filterOptions?.statuses" [value]="status">
                 {{ status }}
               </option>
+            </select>
+          </label>
+
+          <label class="filter-select" *ngIf="activeView === 'customers'">
+            <span>Status</span>
+            <select [(ngModel)]="salesStatus" (ngModelChange)="applyFilters()">
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </label>
 
@@ -445,6 +454,17 @@
             <svg lucideX aria-hidden="true"></svg>
             <span>Clear</span>
           </button>
+
+          <div class="customer-history-exports" *ngIf="activeView === 'customers'">
+            <button type="button" (click)="openExportDialog('customer-sales-history')">
+              <svg lucideDownload aria-hidden="true"></svg>
+              Sales history
+            </button>
+            <button type="button" (click)="openExportDialog('customer-lend-history')">
+              <svg lucideDownload aria-hidden="true"></svg>
+              Lend history
+            </button>
+          </div>
         </section>
 
         <div class="status-message" *ngIf="error" role="alert">
@@ -3258,6 +3278,24 @@
                       <span class="visually-hidden">Actions</span>
                     </th>
                   </tr>
+                  <tr *ngIf="activeView === 'customers'">
+                    <th scope="col">Customer</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="number">Balance</th>
+                    <th scope="col" class="number">Lent</th>
+                    <th scope="col" class="action-column"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                  <tr *ngIf="activeView === 'personnel'">
+                    <th scope="col">Personnel</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col" class="number">Transactions</th>
+                    <th scope="col" class="number">Total pay</th>
+                    <th scope="col" class="number">Total salary</th>
+                    <th scope="col" class="action-column"><span class="visually-hidden">Actions</span></th>
+                  </tr>
                 </thead>
                 <tbody>
                   <tr
@@ -3266,13 +3304,17 @@
                       activeView === 'sales' ||
                       activeView === 'balances' ||
                       activeView === 'inventory' ||
-                      activeView === 'transfers'
+                      activeView === 'transfers' ||
+                      activeView === 'customers' ||
+                      activeView === 'personnel'
                     "
                     [attr.tabindex]="
                       activeView === 'sales' ||
                       activeView === 'balances' ||
                       activeView === 'inventory' ||
-                      activeView === 'transfers'
+                      activeView === 'transfers' ||
+                      activeView === 'customers' ||
+                      activeView === 'personnel'
                         ? 0
                         : null
                     "
@@ -3285,6 +3327,10 @@
                             ? 'View inventory history for ' + (row.name || row.code || row.id)
                             : activeView === 'transfers'
                               ? 'View transfer ' + (row.reference || row.id)
+                              : activeView === 'customers'
+                                ? 'View customer ' + (row.name || row.id)
+                                : activeView === 'personnel'
+                                  ? 'View personnel ' + (row.name || row.id)
                               : null
                     "
                     (click)="openReportRow(row)"
@@ -3440,6 +3486,34 @@
                         </button>
                       </td>
                     </ng-container>
+
+                    <ng-container *ngIf="activeView === 'customers'">
+                      <td><strong>{{ row.name || '-' }}</strong><small>{{ row.email || 'No email' }}</small></td>
+                      <td>{{ row.contact || '-' }}</td>
+                      <td>{{ row.address || '-' }}</td>
+                      <td><span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span></td>
+                      <td class="number"><strong>{{ formatMoney(row.balance) }}</strong></td>
+                      <td class="number">{{ row.lentQuantity || 0 }}</td>
+                      <td class="action-column">
+                        <button class="row-action" type="button" title="View customer" [attr.aria-label]="'View customer ' + row.name" (click)="openCustomerDirectory(row); $event.stopPropagation()">
+                          <svg lucideEye aria-hidden="true"></svg>
+                        </button>
+                      </td>
+                    </ng-container>
+
+                    <ng-container *ngIf="activeView === 'personnel'">
+                      <td><strong>{{ row.name || '-' }}</strong><small>{{ row.card || 'No card ID' }}</small></td>
+                      <td>{{ row.role || '-' }}</td>
+                      <td>{{ row.contact || '-' }}</td>
+                      <td class="number">{{ row.transactionCount || 0 }}</td>
+                      <td class="number">{{ formatMoney(row.totalPay) }}</td>
+                      <td class="number"><strong>{{ formatMoney(row.totalSalary) }}</strong></td>
+                      <td class="action-column">
+                        <button class="row-action" type="button" title="View personnel" [attr.aria-label]="'View personnel ' + row.name" (click)="selectedPersonnel = row; personnelDetailOpen = true; $event.stopPropagation()">
+                          <svg lucideEye aria-hidden="true"></svg>
+                        </button>
+                      </td>
+                    </ng-container>
                   </tr>
                   <tr *ngIf="!table.items.length">
                     <td
@@ -3449,6 +3523,8 @@
                           ? 9
                           : activeView === 'balances'
                             ? 5
+                            : activeView === 'customers' || activeView === 'personnel'
+                              ? 7
                             : activeView === 'sales'
                               ? 7
                               : 6
@@ -5088,17 +5164,87 @@
     </section>
   </div>
 
+  <div class="directory-backdrop" *ngIf="customerDirectoryOpen && selectedDirectoryCustomer as customer" (click)="closeCustomerDirectory()">
+    <section class="directory-drawer" role="dialog" aria-modal="true" aria-labelledby="customer-directory-title" (click)="$event.stopPropagation()">
+      <header class="directory-header">
+        <div>
+          <p>CUSTOMER RECORD</p>
+          <h2 id="customer-directory-title">{{ customer.name }}</h2>
+          <span>{{ customer.contact || 'No contact number' }} · {{ customer.status }}</span>
+        </div>
+        <button type="button" aria-label="Close customer details" (click)="closeCustomerDirectory()"><svg lucideX aria-hidden="true"></svg></button>
+      </header>
+
+      <dl class="directory-facts">
+        <div><dt>Address</dt><dd>{{ customer.address || 'Not recorded' }}</dd></div>
+        <div><dt>Email</dt><dd>{{ customer.email || 'Not recorded' }}</dd></div>
+        <div><dt>Joined</dt><dd>{{ customer.joinedAt ? (customer.joinedAt | date: 'mediumDate') : 'Not recorded' }}</dd></div>
+        <div><dt>Balance</dt><dd>{{ formatMoney(customer.balance) }}</dd></div>
+        <div><dt>Lent items</dt><dd>{{ customer.lentQuantity || 0 }}</dd></div>
+      </dl>
+
+      <nav class="directory-tabs" aria-label="Customer history">
+        <button type="button" [class.active]="customerDirectoryTab === 'sales'" (click)="selectCustomerDirectoryTab('sales')">Sales history</button>
+        <button type="button" [class.active]="customerDirectoryTab === 'lend'" (click)="selectCustomerDirectoryTab('lend')">Lend history</button>
+      </nav>
+
+      <div class="directory-message" *ngIf="customerDirectoryLoading">Loading history…</div>
+      <div class="directory-message error" *ngIf="customerDirectoryError">{{ customerDirectoryError }}</div>
+
+      <div class="directory-table" *ngIf="!customerDirectoryLoading && !customerDirectoryError">
+        <table *ngIf="customerDirectoryTab === 'sales' && customerDirectorySales as history">
+          <thead><tr><th>Date</th><th>Reference</th><th>Payment</th><th>Status</th><th class="number">Items</th><th class="number">Total</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of history.data.items"><td>{{ row.saleDate | date: 'medium' }}</td><td><strong>{{ row.reference || '-' }}</strong></td><td>{{ row.payment || '-' }}</td><td>{{ row.status || '-' }}</td><td class="number">{{ row.itemCount }}</td><td class="number">{{ formatMoney(row.totalAmount) }}</td></tr>
+            <tr *ngIf="!history.data.items.length"><td colspan="6" class="directory-empty">No sales in this date range.</td></tr>
+          </tbody>
+        </table>
+        <table *ngIf="customerDirectoryTab === 'lend' && customerDirectoryLend as history">
+          <thead><tr><th>Date</th><th>Reference</th><th>Item</th><th>Status</th><th class="number">Quantity</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let row of history.data.items"><td>{{ row.historyDate | date: 'medium' }}</td><td><strong>{{ row.reference || '-' }}</strong></td><td>{{ row.itemName || row.itemCode }}</td><td><span class="status-badge" [attr.data-status]="row.status.toLowerCase()">{{ row.status }}</span></td><td class="number">{{ row.quantity }}</td></tr>
+            <tr *ngIf="!history.data.items.length"><td colspan="5" class="directory-empty">No lend or return activity in this date range.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="directory-footer">
+        <span>Page {{ customerDirectoryHistoryPage }} of {{ customerDirectoryHistoryPageCount() }}</span>
+        <div><button type="button" aria-label="Previous history page" [disabled]="customerDirectoryHistoryPage <= 1 || customerDirectoryLoading" (click)="changeCustomerDirectoryHistoryPage(-1)"><svg lucideChevronLeft></svg></button><button type="button" aria-label="Next history page" [disabled]="customerDirectoryHistoryPage >= customerDirectoryHistoryPageCount() || customerDirectoryLoading" (click)="changeCustomerDirectoryHistoryPage(1)"><svg lucideChevronRight></svg></button></div>
+      </footer>
+    </section>
+  </div>
+
+  <div class="directory-backdrop" *ngIf="personnelDetailOpen && selectedPersonnel as personnel" (click)="personnelDetailOpen = false">
+    <section class="directory-drawer personnel-drawer" role="dialog" aria-modal="true" aria-labelledby="personnel-directory-title" (click)="$event.stopPropagation()">
+      <header class="directory-header">
+        <div><p>PERSONNEL RECORD</p><h2 id="personnel-directory-title">{{ personnel.name }}</h2><span>{{ personnel.role || 'Role not recorded' }}</span></div>
+        <button type="button" aria-label="Close personnel details" (click)="personnelDetailOpen = false"><svg lucideX aria-hidden="true"></svg></button>
+      </header>
+      <dl class="directory-facts personnel-facts">
+        <div><dt>Contact</dt><dd>{{ personnel.contact || 'Not recorded' }}</dd></div>
+        <div><dt>Address</dt><dd>{{ personnel.address || 'Not recorded' }}</dd></div>
+        <div><dt>Card ID</dt><dd>{{ personnel.card || 'Not recorded' }}</dd></div>
+        <div><dt>Created</dt><dd>{{ personnel.createdAt ? (personnel.createdAt | date: 'mediumDate') : 'Not recorded' }}</dd></div>
+        <div><dt>Transactions</dt><dd>{{ personnel.transactionCount }}</dd></div>
+        <div><dt>Total pay</dt><dd>{{ formatMoney(personnel.totalPay) }}</dd></div>
+        <div><dt>Total salary</dt><dd>{{ formatMoney(personnel.totalSalary) }}</dd></div>
+      </dl>
+      <p class="directory-readonly-note">Read-only synchronized personnel information from the desktop store.</p>
+    </section>
+  </div>
+
   <div class="data-export-dialog-backdrop" *ngIf="exportFormatOpen">
     <section class="data-export-dialog" role="dialog" aria-modal="true" aria-labelledby="report-export-title">
       <div class="data-export-dialog-header">
-        <div><h2 id="report-export-title">Export report</h2><p>Choose a file format. A Save As dialog will open next.</p></div>
-        <button type="button" class="data-export-dialog-close" aria-label="Close export dialog" (click)="exportFormatOpen = false">&times;</button>
+        <div><h2 id="report-export-title">{{ exportTarget === 'customer-sales-history' ? 'Export all customer sales' : exportTarget === 'customer-lend-history' ? 'Export all customer lend history' : 'Export report' }}</h2><p>Choose a file format. A Save As dialog will open next.</p></div>
+        <button type="button" class="data-export-dialog-close" aria-label="Close export dialog" (click)="exportFormatOpen = false; exportTarget = 'current'">&times;</button>
       </div>
       <div class="data-export-dialog-options">
         <button type="button" class="data-export-format-option" (click)="exportCurrentReport('csv')"><strong>CSV</strong><span>Spreadsheet data</span></button>
         <button type="button" class="data-export-format-option" (click)="exportCurrentReport('pdf')"><strong>PDF</strong><span>Printable document</span></button>
       </div>
-      <div class="data-export-dialog-footer"><button type="button" class="data-export-dialog-cancel" (click)="exportFormatOpen = false">Cancel</button></div>
+      <div class="data-export-dialog-footer"><button type="button" class="data-export-dialog-cancel" (click)="exportFormatOpen = false; exportTarget = 'current'">Cancel</button></div>
     </section>
   </div>
 

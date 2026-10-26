@@ -6,6 +6,8 @@ export type ReportView =
   | 'inventory-forecast'
   | 'transfers'
   | 'balances'
+  | 'customers'
+  | 'personnel'
   | 'customer-insights'
   | 'cash-flow'
   | 'restocks'
@@ -649,6 +651,50 @@ export interface CustomerPurchaseHistoryData extends PagedReportData<{
     averagePurchase: number;
     firstPurchaseDate: string;
     lastPurchaseDate: string;
+  };
+}
+
+export interface CustomerDirectoryRecord {
+  id: number;
+  name: string;
+  address: string;
+  contact: string;
+  email: string;
+  joinedAt: string;
+  balance: number;
+  lentQuantity: number;
+  status: string;
+}
+
+export interface PersonnelDirectoryRecord {
+  id: number;
+  name: string;
+  address: string;
+  contact: string;
+  role: string;
+  transactionCount: number;
+  totalPay: number;
+  createdAt: string;
+  totalSalary: number;
+  card: string;
+}
+
+export interface CustomerLendHistoryData extends PagedReportData<{
+  historyDate: string;
+  reference: string;
+  customerId: number;
+  customerName: string;
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  status: 'LENDED' | 'RETURNED';
+}> {
+  customer: {
+    id: number;
+    name: string;
+    contact: string;
+    balance: number;
+    status: string;
   };
 }
 

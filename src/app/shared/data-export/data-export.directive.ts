@@ -1,7 +1,7 @@
 import { AfterViewInit, Directive, ElementRef, Input, OnDestroy, Renderer2 } from '@angular/core';
 
 @Directive({
-  selector: 'table, [appDataExport]',
+  selector: '[appDataExport]',
   standalone: true,
 })
 export class DataExportDirective implements AfterViewInit, OnDestroy {

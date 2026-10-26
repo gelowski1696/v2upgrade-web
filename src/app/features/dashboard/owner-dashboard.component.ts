@@ -37,9 +37,11 @@ import {
   CashFlowTransactionsData,
   CustomerBalanceHistoryData,
   CustomerBalanceRecord,
+  CustomerDirectoryRecord,
   CustomerInsightRecord,
   CustomerInsightsData,
   CustomerInsightsSort,
+  CustomerLendHistoryData,
   CustomerPurchaseHistoryData,
   CustomerReportRecord,
   DashboardPreferencesData,
@@ -60,6 +62,7 @@ import {
   PagedModuleReportData,
   PagedReportData,
   PaymentAnalysisData,
+  PersonnelDirectoryRecord,
   PortalActivityAction,
   PortalActivityData,
   ProfitabilityData,
@@ -90,9 +93,9 @@ import {
 } from '../../domain/models/report.models';
 import { AccountSecurityComponent } from '../security/account-security.component';
 import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
-import { DataExportDirective } from '../../shared/data-export/data-export.directive';
 
 type ReportExportFormat = 'csv' | 'pdf';
+type ExportTarget = 'current' | 'customer-sales-history' | 'customer-lend-history';
 
 @Component({
   selector: 'app-owner-dashboard',
@@ -101,7 +104,6 @@ type ReportExportFormat = 'csv' | 'pdf';
     FormsModule,
     AccountSecurityComponent,
     LpgLandingPageComponent,
-    DataExportDirective,
     LucideActivity,
     LucideArrowRight,
     LucideBanknote,
@@ -138,6 +140,7 @@ type ReportExportFormat = 'csv' | 'pdf';
     './module-reports.css',
     './scheduled-reports.css',
     './notification-center.css',
+    './customer-personnel.css',
   ],
 })
 export class OwnerDashboardComponent implements OnInit, OnDestroy {
@@ -153,6 +156,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     { key: 'transfers', label: 'Transfers', icon: 'transfers' },
     { key: 'restocks', label: 'Restocks & suppliers', icon: 'transfers' },
     { key: 'balances', label: 'Customer balances', icon: 'balances' },
+    { key: 'customers', label: 'Customers', icon: 'balances' },
+    { key: 'personnel', label: 'Personnel', icon: 'balances' },
     { key: 'customer-insights', label: 'Customer insights', icon: 'balances' },
     { key: 'cash-flow', label: 'Cash flow', icon: 'cash' },
     { key: 'business', label: 'All stores & alerts', icon: 'overview' },
@@ -178,6 +183,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   error = '';
   exporting = false;
   exportFormatOpen = false;
+  exportTarget: ExportTarget = 'current';
   exportError = '';
   exportStatus = '';
   dismissingAlertId = '';
@@ -272,6 +278,16 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   purchaseHistoryResponse: FreshResponse<CustomerPurchaseHistoryData> | null = null;
   selectedPurchaseCustomerId: number | null = null;
   purchaseHistoryPage = 1;
+  customerDirectoryOpen = false;
+  customerDirectoryTab: 'sales' | 'lend' = 'sales';
+  selectedDirectoryCustomer: CustomerDirectoryRecord | null = null;
+  customerDirectoryLoading = false;
+  customerDirectoryError = '';
+  customerDirectorySales: FreshResponse<CustomerPurchaseHistoryData> | null = null;
+  customerDirectoryLend: FreshResponse<CustomerLendHistoryData> | null = null;
+  customerDirectoryHistoryPage = 1;
+  personnelDetailOpen = false;
+  selectedPersonnel: PersonnelDirectoryRecord | null = null;
   saleDetailsOpen = false;
   saleDetailsLoading = false;
   saleDetailsError = '';
@@ -537,7 +553,15 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     );
   }
   get pagedData(): PagedReportData<any> | null {
-    return ['sales', 'inventory', 'transfers', 'balances', 'restocks'].includes(this.activeView)
+    return [
+      'sales',
+      'inventory',
+      'transfers',
+      'balances',
+      'restocks',
+      'customers',
+      'personnel',
+    ].includes(this.activeView)
       ? (this.response?.data ?? null)
       : null;
   }
@@ -561,6 +585,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.search.trim() ||
       this.salesStatus ||
       this.salesPayment ||
+      (this.activeView === 'customers' && this.salesStatus) ||
       this.salesItemCode ||
       this.inventoryCategory ||
       this.inventoryStockStatus ||
@@ -579,6 +604,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       'transfers',
       'balances',
       'restocks',
+      'customers',
+      'personnel',
     ].includes(this.activeView);
   }
   get canExport(): boolean {
@@ -597,6 +624,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       'purchase-report',
       'special-receipts',
       'customer-report',
+      'customers',
+      'personnel',
     ].includes(this.activeView);
   }
   get canSaveCurrentView(): boolean {
@@ -1111,6 +1140,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (this.activeView === 'customer-insights') return 'Search customer or contact';
     if (this.activeView === 'transfers') return 'Search reference, supplier, or type';
     if (this.activeView === 'restocks') return 'Search reference or supplier';
+    if (this.activeView === 'customers') return 'Search name, address, contact, or email';
+    if (this.activeView === 'personnel') return 'Search name, role, contact, or address';
     return 'Search customer or contact';
   }
   categoryOptions(values: string[] | undefined): string[] {
@@ -1215,6 +1246,18 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
                                   page,
                                   filters,
                                 )
+                              : view === 'customers'
+                                ? await this.api.customers<PagedReportData<CustomerDirectoryRecord>>(
+                                    storeId,
+                                    page,
+                                    filters,
+                                  )
+                                : view === 'personnel'
+                                  ? await this.api.personnel<PagedReportData<PersonnelDirectoryRecord>>(
+                                      storeId,
+                                      page,
+                                      filters,
+                                    )
                               : view === 'inventory-forecast'
                                 ? await this.api.inventoryForecast<InventoryForecastData>(
                                     storeId,
@@ -1520,6 +1563,91 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (this.activeView === 'transfers') {
       event?.preventDefault();
       void this.openTransferDetails(row as TransferRecord);
+      return;
+    }
+    if (this.activeView === 'customers') {
+      event?.preventDefault();
+      void this.openCustomerDirectory(row as CustomerDirectoryRecord);
+      return;
+    }
+    if (this.activeView === 'personnel') {
+      event?.preventDefault();
+      this.selectedPersonnel = row as PersonnelDirectoryRecord;
+      this.personnelDetailOpen = true;
+    }
+  }
+
+  async openCustomerDirectory(row: CustomerDirectoryRecord): Promise<void> {
+    this.selectedDirectoryCustomer = row;
+    this.customerDirectoryOpen = true;
+    this.customerDirectoryTab = 'sales';
+    this.customerDirectoryHistoryPage = 1;
+    this.customerDirectorySales = null;
+    this.customerDirectoryLend = null;
+    await this.loadCustomerDirectoryHistory();
+  }
+
+  async selectCustomerDirectoryTab(tab: 'sales' | 'lend'): Promise<void> {
+    if (this.customerDirectoryTab === tab) return;
+    this.customerDirectoryTab = tab;
+    this.customerDirectoryHistoryPage = 1;
+    await this.loadCustomerDirectoryHistory();
+  }
+
+  async changeCustomerDirectoryHistoryPage(direction: number): Promise<void> {
+    const data =
+      this.customerDirectoryTab === 'sales'
+        ? this.customerDirectorySales?.data
+        : this.customerDirectoryLend?.data;
+    if (!data) return;
+    const next = this.customerDirectoryHistoryPage + direction;
+    const count = Math.max(1, Math.ceil(data.total / data.pageSize));
+    if (next < 1 || next > count) return;
+    this.customerDirectoryHistoryPage = next;
+    await this.loadCustomerDirectoryHistory();
+  }
+
+  customerDirectoryHistoryPageCount(): number {
+    const data =
+      this.customerDirectoryTab === 'sales'
+        ? this.customerDirectorySales?.data
+        : this.customerDirectoryLend?.data;
+    return data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  }
+
+  closeCustomerDirectory(): void {
+    this.customerDirectoryOpen = false;
+    this.selectedDirectoryCustomer = null;
+  }
+
+  private async loadCustomerDirectoryHistory(): Promise<void> {
+    const customer = this.selectedDirectoryCustomer;
+    if (!customer || !this.selectedStoreId) return;
+    this.customerDirectoryLoading = true;
+    this.customerDirectoryError = '';
+    try {
+      if (this.customerDirectoryTab === 'sales') {
+        this.customerDirectorySales = await this.api.customerPurchaseHistory<CustomerPurchaseHistoryData>(
+          this.selectedStoreId,
+          customer.id,
+          this.from,
+          this.to,
+          this.customerDirectoryHistoryPage,
+        );
+      } else {
+        this.customerDirectoryLend = await this.api.customerLendHistory<CustomerLendHistoryData>(
+          this.selectedStoreId,
+          customer.id,
+          this.from,
+          this.to,
+          this.customerDirectoryHistoryPage,
+        );
+      }
+    } catch (error) {
+      this.customerDirectoryError = this.message(error, 'Customer history could not be loaded.');
+    } finally {
+      this.customerDirectoryLoading = false;
+      this.changeDetector.detectChanges();
     }
   }
   async retryCustomerBalanceHistory(): Promise<void> {
@@ -1556,10 +1684,19 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   closeCustomerPurchaseHistory(): void {
     this.dismissPurchaseHistory(true);
   }
+  openExportDialog(target: ExportTarget = 'current'): void {
+    this.exportTarget = target;
+    this.exportFormatOpen = true;
+  }
   async exportCurrentReport(format: ReportExportFormat): Promise<void> {
     if (!this.selectedStoreId || !this.canExport || this.exporting) return;
     this.exportFormatOpen = false;
-    const report = this.activeView === 'balances' ? 'customer-balances' : this.activeView;
+    const report =
+      this.exportTarget === 'current'
+        ? this.activeView === 'balances'
+          ? 'customer-balances'
+          : this.activeView
+        : this.exportTarget;
     const destination = await this.prepareExportDestination(`${report}-${this.from}-to-${this.to}.${format}`, format);
     if (destination === undefined) return;
     this.exporting = true;
@@ -2557,7 +2694,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   private reportFilters(): ReportFilters {
     return {
       search: this.search,
-      status: this.activeView === 'sales' ? this.salesStatus : '',
+      status: this.activeView === 'sales' || this.activeView === 'customers' ? this.salesStatus : '',
       payment: this.activeView === 'sales' ? this.salesPayment : '',
       itemCode: this.activeView === 'sales' ? this.salesItemCode : '',
       category: this.activeView === 'inventory' ? this.inventoryCategory : '',
