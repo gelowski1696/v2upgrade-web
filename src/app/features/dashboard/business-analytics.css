@@ -114,6 +114,10 @@
   grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.75fr);
 }
 
+.business-layout--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .analytics-columns > section,
 .business-layout > section,
 .payment-layout > section {

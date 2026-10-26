@@ -131,6 +131,61 @@
             <strong>{{ freshnessAge() }}</strong>
           </div>
         </div>
+
+        <div class="notification-center" [class.open]="ownerAlertsOpen">
+          <button
+            class="notification-bell"
+            type="button"
+            title="Notifications"
+            [attr.aria-label]="ownerAlerts.length ? ownerAlerts.length + ' active notifications' : 'Notifications'"
+            aria-haspopup="dialog"
+            [attr.aria-expanded]="ownerAlertsOpen"
+            aria-controls="owner-notification-list"
+            (click)="toggleOwnerAlerts()"
+          >
+            <svg lucideBell aria-hidden="true"></svg>
+            <span *ngIf="ownerAlerts.length" [class.high]="hasHighPriorityOwnerAlerts">
+              {{ ownerAlerts.length > 99 ? '99+' : ownerAlerts.length }}
+            </span>
+          </button>
+
+          <section
+            class="notification-panel"
+            id="owner-notification-list"
+            *ngIf="ownerAlertsOpen"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="owner-notifications-title"
+          >
+            <header>
+              <div><h2 id="owner-notifications-title">Notifications</h2><p>Items that may need owner attention</p></div>
+              <span>{{ ownerAlerts.length }} active</span>
+            </header>
+
+            <p class="notification-message error" role="alert" *ngIf="ownerAlertsError">{{ ownerAlertsError }}</p>
+            <div class="notification-loading" *ngIf="ownerAlertsLoading" role="status">Loading notifications...</div>
+
+            <ol class="notification-list" *ngIf="!ownerAlertsLoading && ownerAlerts.length">
+              <li *ngFor="let alert of ownerAlerts" [attr.data-severity]="alert.severity.toLowerCase()">
+                <span class="notification-severity" aria-hidden="true"></span>
+                <div class="notification-copy">
+                  <span><b>{{ alert.type }}</b><small>{{ alert.storeName }}</small></span>
+                  <strong>{{ alert.title }}</strong>
+                  <p>{{ alert.detail }}</p>
+                  <em *ngIf="alert.amount">{{ formatMoney(alert.amount) }}</em>
+                  <div class="notification-actions" *ngIf="alert.saleId || alert.dismissible">
+                    <button type="button" *ngIf="alert.saleId" [attr.aria-label]="'View sale ' + (alert.reference || alert.saleId)" (click)="openBusinessAlertSale(alert)"><svg lucideEye aria-hidden="true"></svg>View sale</button>
+                    <button type="button" *ngIf="alert.dismissible" [disabled]="!!dismissingAlertId" [attr.aria-label]="'Dismiss ' + alert.title" (click)="dismissBusinessAlert(alert)"><svg lucideX aria-hidden="true"></svg>{{ dismissingAlertId === alert.id ? 'Dismissing' : 'Dismiss' }}</button>
+                  </div>
+                </div>
+              </li>
+            </ol>
+
+            <div class="notification-empty" *ngIf="!ownerAlertsLoading && !ownerAlerts.length && !ownerAlertsError">
+              <svg lucideBell aria-hidden="true"></svg><strong>You're all caught up</strong><span>No store notifications require attention.</span>
+            </div>
+          </section>
+        </div>
       </header>
 
       <div class="workspace-content" [attr.aria-busy]="loading">
@@ -181,13 +236,13 @@
                 class="export-command"
                 type="button"
                 *ngIf="canExport"
-                [attr.title]="exporting ? 'Creating CSV export' : 'Export all matching records'"
-                [attr.aria-label]="exporting ? 'Creating CSV export' : 'Export CSV'"
+                [attr.title]="exporting ? 'Creating export' : 'Export all matching records'"
+                [attr.aria-label]="exporting ? 'Creating export' : 'Export report'"
                 [disabled]="loading || exporting || !response"
-                (click)="exportCurrentReport()"
+                (click)="exportFormatOpen = true"
               >
                 <svg [class.spin]="exporting" lucideDownload aria-hidden="true"></svg>
-                <span>{{ exporting ? 'Exporting' : 'Export CSV' }}</span>
+                <span>{{ exporting ? 'Exporting' : 'Export' }}</span>
               </button>
               <button
                 type="button"
@@ -2307,7 +2362,7 @@
                 <span>Selected reporting period</span>
               </div>
             </dl>
-            <div class="business-layout">
+            <div class="business-layout business-layout--single">
               <section aria-labelledby="store-comparison-title">
                 <header>
                   <h3 id="store-comparison-title">Store comparison</h3>
@@ -2360,52 +2415,6 @@
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </section>
-              <section aria-labelledby="owner-alerts-title">
-                <header>
-                  <h3 id="owner-alerts-title">Owner alerts</h3>
-                  <span>{{ business.alerts.length }} active</span>
-                </header>
-                <p class="owner-alert-error" role="alert" *ngIf="alertDismissError">
-                  {{ alertDismissError }}
-                </p>
-                <div class="owner-alerts">
-                  <article
-                    *ngFor="let alert of business.alerts"
-                    [attr.data-severity]="alert.severity.toLowerCase()"
-                  >
-                    <span>{{ alert.type }}</span>
-                    <div>
-                      <strong>{{ alert.title }}</strong
-                      ><small>{{ alert.storeName }} · {{ alert.detail }}</small>
-                    </div>
-                    <div class="owner-alert-actions">
-                      <b *ngIf="alert.amount">{{ formatMoney(alert.amount) }}</b>
-                      <button
-                        type="button"
-                        *ngIf="alert.saleId"
-                        [attr.aria-label]="'View sale ' + (alert.reference || alert.saleId)"
-                        (click)="openBusinessAlertSale(alert)"
-                      >
-                        <svg lucideEye aria-hidden="true"></svg>
-                        <span>View sale</span>
-                      </button>
-                      <button
-                        type="button"
-                        *ngIf="alert.dismissible"
-                        [disabled]="!!dismissingAlertId"
-                        [attr.aria-label]="'Dismiss ' + alert.title"
-                        (click)="dismissBusinessAlert(alert)"
-                      >
-                        <svg lucideX aria-hidden="true"></svg>
-                        <span>{{ dismissingAlertId === alert.id ? 'Dismissing' : 'Dismiss' }}</span>
-                      </button>
-                    </div>
-                  </article>
-                  <p class="compact-empty" *ngIf="!business.alerts.length">
-                    No store alerts require attention.
-                  </p>
                 </div>
               </section>
             </div>
@@ -5076,6 +5085,20 @@
           </button>
         </div>
       </footer>
+    </section>
+  </div>
+
+  <div class="data-export-dialog-backdrop" *ngIf="exportFormatOpen">
+    <section class="data-export-dialog" role="dialog" aria-modal="true" aria-labelledby="report-export-title">
+      <div class="data-export-dialog-header">
+        <div><h2 id="report-export-title">Export report</h2><p>Choose a file format. A Save As dialog will open next.</p></div>
+        <button type="button" class="data-export-dialog-close" aria-label="Close export dialog" (click)="exportFormatOpen = false">&times;</button>
+      </div>
+      <div class="data-export-dialog-options">
+        <button type="button" class="data-export-format-option" (click)="exportCurrentReport('csv')"><strong>CSV</strong><span>Spreadsheet data</span></button>
+        <button type="button" class="data-export-format-option" (click)="exportCurrentReport('pdf')"><strong>PDF</strong><span>Printable document</span></button>
+      </div>
+      <div class="data-export-dialog-footer"><button type="button" class="data-export-dialog-cancel" (click)="exportFormatOpen = false">Cancel</button></div>
     </section>
   </div>
 

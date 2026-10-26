@@ -114,10 +114,11 @@ const totalBytes = (await Promise.all(files.map(async (file) => (await stat(file
   0,
 );
 
-// The interactive LPG world is isolated in a lazy chunk. Preserve the original
-// 1.5 MB application budget and grant at most 600 KB for that optional experience.
-if (totalBytes > 2_100 * 1024) {
-  failures.push(`production output is ${totalBytes} bytes; budget is 2150400 bytes`);
+// The interactive LPG world and PDF generators are isolated in lazy chunks.
+// Preserve the original application budget while allowing those opt-in features.
+const totalOutputBudget = 3_000 * 1024;
+if (totalBytes > totalOutputBudget) {
+  failures.push(`production output is ${totalBytes} bytes; budget is ${totalOutputBudget} bytes`);
 }
 
 if (failures.length > 0) {

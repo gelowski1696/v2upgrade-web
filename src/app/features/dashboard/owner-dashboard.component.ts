@@ -5,6 +5,7 @@ import {
   LucideActivity,
   LucideArrowRight,
   LucideBanknote,
+  LucideBell,
   LucideBookmark,
   LucideBoxes,
   LucideBuilding2,
@@ -89,6 +90,9 @@ import {
 } from '../../domain/models/report.models';
 import { AccountSecurityComponent } from '../security/account-security.component';
 import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
+import { DataExportDirective } from '../../shared/data-export/data-export.directive';
+
+type ReportExportFormat = 'csv' | 'pdf';
 
 @Component({
   selector: 'app-owner-dashboard',
@@ -97,9 +101,11 @@ import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
     FormsModule,
     AccountSecurityComponent,
     LpgLandingPageComponent,
+    DataExportDirective,
     LucideActivity,
     LucideArrowRight,
     LucideBanknote,
+    LucideBell,
     LucideBookmark,
     LucideBoxes,
     LucideBuilding2,
@@ -131,6 +137,7 @@ import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
     './transfer-details.css',
     './module-reports.css',
     './scheduled-reports.css',
+    './notification-center.css',
   ],
 })
 export class OwnerDashboardComponent implements OnInit, OnDestroy {
@@ -170,10 +177,15 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   exporting = false;
+  exportFormatOpen = false;
   exportError = '';
   exportStatus = '';
   dismissingAlertId = '';
   alertDismissError = '';
+  ownerAlerts: BusinessOverviewData['alerts'] = [];
+  ownerAlertsOpen = false;
+  ownerAlertsLoading = false;
+  ownerAlertsError = '';
   scheduledReports: ScheduledReportsData | null = null;
   scheduleBusy = '';
   scheduleError = '';
@@ -437,6 +449,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   get businessOverview(): BusinessOverviewData | null {
     return this.activeView === 'business' ? (this.response?.data as BusinessOverviewData) : null;
   }
+  get hasHighPriorityOwnerAlerts(): boolean {
+    return this.ownerAlerts.some((alert) => alert.severity === 'HIGH');
+  }
   get selectedStoreSchedules(): ScheduledReportsData['schedules'] {
     return (
       this.scheduledReports?.schedules.filter(
@@ -651,6 +666,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.stores = [];
     this.selectedStoreId = '';
     this.response = null;
+    this.ownerAlerts = [];
+    this.ownerAlertsOpen = false;
+    this.ownerAlertsError = '';
     this.activityLog = null;
     this.reportCapabilities = null;
     this.salesTrendResponse = null;
@@ -692,6 +710,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         await this.loadReportCapabilities();
         await this.loadDashboardPreferences();
         await this.loadView();
+        if (this.activeView !== 'business') void this.loadOwnerAlerts();
       }
     } catch (error) {
       this.error = this.message(error, 'Stores could not be loaded.');
@@ -701,6 +720,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     }
   }
   async selectView(view: ReportView): Promise<void> {
+    this.ownerAlertsOpen = false;
     this.trendRequest += 1;
     this.receivablesRequest += 1;
     this.dismissSaleDetails(false);
@@ -764,6 +784,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.page = 1;
     if (this.activeView === 'inventory-summary') this.ensureInventorySummaryDate(true);
     await this.loadView();
+    if (this.activeView !== 'business') void this.loadOwnerAlerts();
     this.analytics.feature('DATE_RANGE_CHANGED', this.analyticsRoute(), this.selectedStoreId);
   }
   async changeActivityFilter(): Promise<void> {
@@ -1028,14 +1049,36 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   }
   openBusinessAlertSale(alert: BusinessOverviewData['alerts'][number]): void {
     if (!alert.saleId) return;
+    this.ownerAlertsOpen = false;
     void this.openSaleDetails({ id: alert.saleId }, alert.storeId);
   }
+
+  toggleOwnerAlerts(): void {
+    this.ownerAlertsOpen = !this.ownerAlertsOpen;
+  }
+
+  private async loadOwnerAlerts(): Promise<void> {
+    if (!this.api.user || this.ownerAlertsLoading) return;
+    this.ownerAlertsLoading = true;
+    this.ownerAlertsError = '';
+    try {
+      const response = await this.api.businessOverview<BusinessOverviewData>(this.from, this.to);
+      this.ownerAlerts = response.data.alerts;
+    } catch (error) {
+      this.ownerAlertsError = this.message(error, 'Notifications could not be loaded.');
+    } finally {
+      this.ownerAlertsLoading = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
   async dismissBusinessAlert(alert: BusinessOverviewData['alerts'][number]): Promise<void> {
     if (!alert.dismissible || this.dismissingAlertId) return;
     this.dismissingAlertId = alert.id;
     this.alertDismissError = '';
     try {
       await this.api.dismissAlert(alert.id, this.from, this.to);
+      this.ownerAlerts = this.ownerAlerts.filter((candidate) => candidate.id !== alert.id);
       const current = this.businessOverview;
       if (current) {
         this.response = {
@@ -1047,7 +1090,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         };
       }
     } catch (error) {
-      this.alertDismissError = this.message(error, 'The alert could not be dismissed.');
+      const message = this.message(error, 'The notification could not be dismissed.');
+      this.alertDismissError = message;
+      this.ownerAlertsError = message;
     } finally {
       this.dismissingAlertId = '';
       this.changeDetector.detectChanges();
@@ -1194,6 +1239,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
                                     );
       if (requestId !== this.reportRequest) return;
       this.response = response;
+      if (view === 'business') {
+        this.ownerAlerts = (response.data as BusinessOverviewData).alerts;
+        this.ownerAlertsError = '';
+      }
       if (view === 'sales-targets') this.syncSalesTargetDraft(response.data as SalesTargetData);
       if (view === 'overview') await this.loadSalesTrends();
       if (view === 'balances') await this.loadReceivablesAging();
@@ -1507,12 +1556,15 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   closeCustomerPurchaseHistory(): void {
     this.dismissPurchaseHistory(true);
   }
-  async exportCurrentReport(): Promise<void> {
+  async exportCurrentReport(format: ReportExportFormat): Promise<void> {
     if (!this.selectedStoreId || !this.canExport || this.exporting) return;
+    this.exportFormatOpen = false;
+    const report = this.activeView === 'balances' ? 'customer-balances' : this.activeView;
+    const destination = await this.prepareExportDestination(`${report}-${this.from}-to-${this.to}.${format}`, format);
+    if (destination === undefined) return;
     this.exporting = true;
     let exportSucceeded = false;
     this.clearExportFeedback();
-    const report = this.activeView === 'balances' ? 'customer-balances' : this.activeView;
     try {
       if (this.activeView === 'inventory-summary' && this.inventorySummaryReport) {
         const data = this.inventorySummaryReport;
@@ -1556,7 +1608,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.actualFilled + row.actualEmpty,
           ]),
         ];
-        this.downloadLocalCsv(`inventory-summary-${this.inventorySummaryDate}.csv`, rows);
+        await this.downloadLocalExport(`inventory-summary-${this.inventorySummaryDate}.csv`, rows, format, destination);
         this.exportStatus = `Exported ${data.rows.length} ${data.rows.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1607,7 +1659,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ['Total salary', data.cashFlow.salaryPaid],
           ['Net amount', this.financialNetAmount],
         ];
-        this.downloadLocalCsv(`financial-report-${this.from}-to-${this.to}.csv`, rows);
+        await this.downloadLocalExport(`financial-report-${this.from}-to-${this.to}.csv`, rows, format, destination);
         this.exportStatus = `Exported ${data.productRows.length} ${data.productRows.length === 1 ? 'product' : 'products'}.`;
         exportSucceeded = true;
         return;
@@ -1615,7 +1667,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'discount-report' && this.discountReport) {
         const data = this.discountReport;
         const items = await this.loadAllPagedModuleItems('discount-report', data);
-        this.downloadLocalCsv(`discount-report-${this.from}-to-${this.to}.csv`, [
+        await this.downloadLocalExport(`discount-report-${this.from}-to-${this.to}.csv`, [
           ['Discount history'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
@@ -1629,7 +1681,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.specialDiscount,
             row.totalDiscount,
           ]),
-        ]);
+        ], format, destination);
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1637,7 +1689,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'purchase-report' && this.purchaseReport) {
         const data = this.purchaseReport;
         const items = await this.loadAllPagedModuleItems('purchase-report', data);
-        this.downloadLocalCsv(`purchase-report-${this.from}-to-${this.to}.csv`, [
+        await this.downloadLocalExport(`purchase-report-${this.from}-to-${this.to}.csv`, [
           ['Purchase history'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
@@ -1651,14 +1703,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.totalQuantity,
             row.totalAmount,
           ]),
-        ]);
+        ], format, destination);
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
       if (this.activeView === 'special-receipts' && this.specialReceiptReport) {
         const data = this.specialReceiptReport;
-        this.downloadLocalCsv(`special-receipts-${this.from}-to-${this.to}.csv`, [
+        await this.downloadLocalExport(`special-receipts-${this.from}-to-${this.to}.csv`, [
           ['Special receipts'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
@@ -1673,14 +1725,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.cashier,
             row.totalAmount,
           ]),
-        ]);
+        ], format, destination);
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
       if (this.activeView === 'customer-report' && this.customerReport) {
         const data = this.customerReport;
-        this.downloadLocalCsv(`customer-report-${this.from}-to-${this.to}.csv`, [
+        await this.downloadLocalExport(`customer-report-${this.from}-to-${this.to}.csv`, [
           ['Customer sales'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
@@ -1694,7 +1746,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.itemCount,
             row.totalAmount,
           ]),
-        ]);
+        ], format, destination);
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1706,13 +1758,21 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         this.to,
         this.reportFilters(),
       );
-      this.downloadCsv(response.data);
+      if (format === 'csv') {
+        await this.downloadCsv(response.data, destination);
+      } else {
+        await this.downloadRowsPdf(
+          response.data.fileName.replace(/\.csv$/i, '.pdf'),
+          this.parseCsv(response.data.content),
+          destination,
+        );
+      }
       this.exportStatus = `Exported ${response.data.rowCount} ${
         response.data.rowCount === 1 ? 'record' : 'records'
       }.`;
       exportSucceeded = true;
     } catch (error) {
-      this.exportError = this.message(error, 'The CSV export could not be created.');
+      this.exportError = this.message(error, `The ${format.toUpperCase()} export could not be created.`);
     } finally {
       if (exportSucceeded) {
         this.analytics.feature('REPORT_EXPORTED', this.analyticsRoute(), this.selectedStoreId);
@@ -1808,7 +1868,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   }
   @HostListener('document:keydown.escape')
   closeSaleDetailsOnEscape(): void {
-    if (this.saveViewOpen) {
+    if (this.ownerAlertsOpen) {
+      this.ownerAlertsOpen = false;
+    } else if (this.exportFormatOpen) {
+      this.exportFormatOpen = false;
+    } else if (this.saveViewOpen) {
       this.closeSaveView();
     } else if (this.purchaseHistoryOpen) {
       this.closeCustomerPurchaseHistory();
@@ -1825,6 +1889,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     } else if (this.dataQualityOpen) {
       this.closeDataQuality();
     }
+  }
+
+  @HostListener('document:click', ['$event'])
+  closeOwnerAlertsOnOutsideClick(event: MouseEvent): void {
+    if (!this.ownerAlertsOpen) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('.notification-center')) return;
+    this.ownerAlertsOpen = false;
   }
   saleDiscountTotal(sale: SaleRecord): number {
     return this.numberValue(sale.discount) + this.numberValue(sale.specialDiscount);
@@ -2301,11 +2373,51 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (value === null) element.removeAttribute('style');
     else element.setAttribute('style', value);
   }
-  private downloadCsv(exportData: ReportExportData): void {
+  private async prepareExportDestination(
+    suggestedName: string,
+    format: ReportExportFormat,
+  ): Promise<((blob: Blob) => Promise<void>) | null | undefined> {
+    const pickerWindow = window as unknown as Window & {
+      showSaveFilePicker?: (options: {
+        suggestedName: string;
+        types: Array<{ description: string; accept: Record<string, string[]> }>;
+      }) => Promise<{
+        createWritable: () => Promise<{
+          write: (data: Blob) => Promise<void>;
+          close: () => Promise<void>;
+        }>;
+      }>;
+    };
+    if (!pickerWindow.showSaveFilePicker) return null;
+    try {
+      const handle = await pickerWindow.showSaveFilePicker({
+        suggestedName: suggestedName.replace(/[\\/:*?"<>|]/g, '-'),
+        types: [{
+          description: `${format.toUpperCase()} file`,
+          accept: { [format === 'pdf' ? 'application/pdf' : 'text/csv']: [`.${format}`] },
+        }],
+      });
+      return async (blob: Blob) => {
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return undefined;
+      return null;
+    }
+  }
+  private async downloadCsv(
+    exportData: ReportExportData,
+    destination: ((blob: Blob) => Promise<void>) | null,
+  ): Promise<void> {
     const fileName = exportData.fileName.replace(/[\\/:*?"<>|]/g, '-');
-    const url = URL.createObjectURL(
-      new Blob([exportData.content], { type: 'text/csv;charset=utf-8' }),
-    );
+    const blob = new Blob([exportData.content], { type: 'text/csv;charset=utf-8' });
+    if (destination) {
+      await destination(blob);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
@@ -2314,11 +2426,102 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
-  private downloadLocalCsv(fileName: string, rows: Array<Array<string | number>>): void {
+  private async downloadLocalExport(
+    fileName: string,
+    rows: Array<Array<string | number>>,
+    format: ReportExportFormat,
+    destination: ((blob: Blob) => Promise<void>) | null,
+  ): Promise<void> {
+    if (format === 'pdf') {
+      await this.downloadRowsPdf(fileName.replace(/\.csv$/i, '.pdf'), rows, destination);
+      return;
+    }
     const content = `\uFEFF${rows
       .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
       .join('\r\n')}`;
-    this.downloadCsv({ fileName, content, rowCount: Math.max(0, rows.length - 1) });
+    await this.downloadCsv({ fileName, content, rowCount: Math.max(0, rows.length - 1) }, destination);
+  }
+
+  private async downloadRowsPdf(
+    fileName: string,
+    rows: Array<Array<string | number>>,
+    destination: ((blob: Blob) => Promise<void>) | null,
+  ): Promise<void> {
+    const width = Math.max(1, ...rows.map((row) => row.length));
+    const normalized = rows.map((row) => [
+      ...row.map(String),
+      ...Array(Math.max(0, width - row.length)).fill(''),
+    ]);
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    const pdf = new jsPDF({ orientation: width > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+    const title = String(rows[0]?.[0] || 'Report export');
+    pdf.setProperties({ title, creator: 'POS V2 Owner Dashboard' });
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.text(title, 36, 36);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(95, 105, 120);
+    pdf.text(`Exported ${new Date().toLocaleString()}`, 36, 51);
+    autoTable(pdf, {
+      body: normalized.slice(1),
+      startY: 62,
+      margin: { left: 28, right: 28, bottom: 28 },
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: width > 5 ? 6.5 : 7.5, cellPadding: 4, overflow: 'linebreak' },
+      alternateRowStyles: { fillColor: [247, 249, 248] },
+    });
+    const blob = pdf.output('blob');
+    if (destination) {
+      await destination(blob);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName.replace(/[\\/:*?"<>|]/g, '-');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  private parseCsv(content: string): string[][] {
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let cell = '';
+    let quoted = false;
+    const source = content.replace(/^\uFEFF/, '');
+    for (let index = 0; index < source.length; index += 1) {
+      const character = source[index];
+      if (character === '"') {
+        if (quoted && source[index + 1] === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (character === ',' && !quoted) {
+        row.push(cell);
+        cell = '';
+      } else if ((character === '\n' || character === '\r') && !quoted) {
+        if (character === '\r' && source[index + 1] === '\n') index += 1;
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = '';
+      } else {
+        cell += character;
+      }
+    }
+    if (cell || row.length) {
+      row.push(cell);
+      rows.push(row);
+    }
+    return rows;
   }
   private clearExportFeedback(): void {
     this.exportError = '';

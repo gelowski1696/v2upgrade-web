@@ -672,8 +672,12 @@ test('exports every matching report row with the selected store and dates', asyn
   await expect(page.getByText('SALE-PAGE-1')).toBeVisible();
   const from = await page.locator('.date-filter input[type="date"]').nth(0).inputValue();
   const to = await page.locator('.date-filter input[type="date"]').nth(1).inputValue();
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.getByRole('button', { name: 'Export report' }).click();
+  await page.getByRole('dialog', { name: 'Export report' }).getByRole('button', { name: /^CSV/ }).click();
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('main-lpg-store-sales-2026-09-01-to-2026-09-30.csv');
@@ -1602,7 +1606,11 @@ test('opens supplier, product, payment, and authorized-store monitoring views', 
   await expect(page.locator('.active-product-filter')).toContainText('11 kg LPG');
   expect(new URL(productSalesUrl).searchParams.get('itemCode')).toBe('LPG-11');
 
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
+  await page.getByRole('button', { name: 'Export report' }).click();
+  await page.getByRole('dialog', { name: 'Export report' }).getByRole('button', { name: /^CSV/ }).click();
   await expect.poll(() => productExportUrl).not.toBe('');
   expect(new URL(productExportUrl).searchParams.get('itemCode')).toBe('LPG-11');
 
@@ -1612,6 +1620,8 @@ test('opens supplier, product, payment, and authorized-store monitoring views', 
 
   await selectReport('All stores & alerts');
   await expect(page.getByText('Authorized-store overview')).toBeVisible();
+  await page.getByRole('button', { name: /active notifications/ }).click();
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
   await expect(page.getByText('Inventory requires attention')).toBeVisible();
   await expect(page.getByText('High discount requires review')).toBeVisible();
   await expect(page.getByText('Platform backup failed')).toBeVisible();
@@ -1621,6 +1631,7 @@ test('opens supplier, product, payment, and authorized-store monitoring views', 
   await expect.poll(() => alertSaleDetailsUrl).toContain(`/stores/${store.id}/sales/12`);
   await alertSale.getByRole('button', { name: 'Close', exact: true }).click({ force: true });
   await expect(page.getByText('All authorized stores').first()).toBeVisible();
+  await page.getByRole('button', { name: /active notifications/ }).click();
   await page.getByRole('button', { name: 'Dismiss High discount requires review' }).click();
   await expect(page.getByText('High discount requires review')).toBeHidden();
   await expect.poll(() => dismissedAlertUrl).toContain('/portal/alerts/discount-1-12/dismiss');

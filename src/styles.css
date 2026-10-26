@@ -145,3 +145,199 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+/* Shared table portability controls. Kept global because the controls are mounted beside
+   tables at runtime and should look identical across dashboard modules. */
+.data-export-toolbar {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0.35rem auto;
+  flex-wrap: wrap;
+}
+
+.data-export-toolbar--inline {
+  display: inline-flex;
+  width: auto;
+  margin: 0;
+  padding-left: 0.4rem;
+  border-left: 1px solid color-mix(in srgb, var(--ink, #1f2937) 15%, transparent);
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.data-export-button {
+  min-width: 2.55rem;
+  min-height: 1.625rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--ink, #1f2937) 22%, transparent);
+  border-radius: 0.55rem;
+  background: var(--surface, #ffffff);
+  color: var(--ink, #1f2937);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.data-export-button:hover:not(:disabled),
+.data-export-button:focus-visible {
+  border-color: #1f6b50;
+  background: #edf7f2;
+  color: #174d3b;
+}
+
+.data-export-button:focus-visible {
+  outline: 3px solid rgb(31 107 80 / 22%);
+  outline-offset: 2px;
+}
+
+.data-export-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+body.data-export-dialog-open { overflow: hidden; }
+
+.data-export-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(18 24 21 / 48%);
+  animation: data-export-backdrop-in 140ms ease-out both;
+}
+
+.data-export-dialog {
+  width: min(24rem, 100%);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ink, #1f2937) 18%, transparent);
+  border-radius: 0.85rem;
+  background: var(--surface, #fff);
+  color: var(--ink, #1f2937);
+  box-shadow: 0 1.25rem 3.5rem rgb(15 23 19 / 24%);
+  animation: data-export-dialog-in 160ms ease-out both;
+}
+
+.data-export-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.1rem 0.75rem;
+}
+
+.data-export-dialog-header h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+.data-export-dialog-header p { margin: 0.3rem 0 0; color: var(--muted, #667085); font-size: 0.76rem; line-height: 1.45; }
+
+.data-export-dialog-close,
+.data-export-dialog-cancel,
+.data-export-format-option { font: inherit; cursor: pointer; }
+
+.data-export-dialog-close {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--muted, #667085);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.data-export-dialog-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0 1.1rem 1rem;
+}
+
+.data-export-format-option {
+  display: flex;
+  min-height: 4.25rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--ink, #1f2937) 20%, transparent);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--surface, #fff) 94%, #edf7f2);
+  color: var(--ink, #1f2937);
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.data-export-format-option strong { font-size: 0.82rem; letter-spacing: 0.04em; }
+.data-export-format-option span { color: var(--muted, #667085); font-size: 0.7rem; }
+
+.data-export-format-option:hover,
+.data-export-format-option:focus-visible {
+  border-color: #1f6b50;
+  background: #edf7f2;
+  transform: translateY(-1px);
+}
+
+.data-export-dialog-close:hover,
+.data-export-dialog-close:focus-visible,
+.data-export-dialog-cancel:hover,
+.data-export-dialog-cancel:focus-visible { background: #edf7f2; color: #174d3b; }
+
+.data-export-dialog :focus-visible { outline: 3px solid rgb(31 107 80 / 22%); outline-offset: 2px; }
+
+.data-export-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink, #1f2937) 12%, transparent);
+  background: color-mix(in srgb, var(--surface, #fff) 96%, #f5f7f6);
+}
+
+.data-export-dialog-cancel {
+  min-height: 1.9rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--ink, #1f2937) 20%, transparent);
+  border-radius: 0.5rem;
+  background: var(--surface, #fff);
+  color: var(--ink, #1f2937);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@keyframes data-export-backdrop-in { from { opacity: 0; } }
+@keyframes data-export-dialog-in { from { opacity: 0; transform: translateY(0.35rem) scale(0.985); } }
+
+@media (max-width: 520px) {
+  .data-export-toolbar {
+    justify-content: flex-end;
+  }
+
+  .data-export-dialog-options { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .table-heading > .data-export-toolbar--inline {
+    align-self: flex-end;
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media print {
+  .data-export-toolbar {
+    display: none !important;
+  }
+
+  .data-export-dialog-backdrop { display: none !important; }
+}
