@@ -508,14 +508,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       ? (this.response?.data as PagedModuleReportData<PurchaseReportRecord>)
       : null;
   }
-  get specialReceiptReport(): ModuleReportData<SpecialReceiptReportRecord> | null {
+  get specialReceiptReport(): PagedModuleReportData<SpecialReceiptReportRecord> | null {
     return this.activeView === 'special-receipts'
-      ? (this.response?.data as ModuleReportData<SpecialReceiptReportRecord>)
+      ? (this.response?.data as PagedModuleReportData<SpecialReceiptReportRecord>)
       : null;
   }
-  get customerReport(): ModuleReportData<CustomerReportRecord> | null {
+  get customerReport(): PagedModuleReportData<CustomerReportRecord> | null {
     return this.activeView === 'customer-report'
-      ? (this.response?.data as ModuleReportData<CustomerReportRecord>)
+      ? (this.response?.data as PagedModuleReportData<CustomerReportRecord>)
       : null;
   }
   get financialLpgRows(): FinancialProductReportRow[] {
@@ -568,6 +568,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   get pagedModuleData(): PagedModuleReportData<unknown> | null {
     if (this.activeView === 'discount-report') return this.discountReport;
     if (this.activeView === 'purchase-report') return this.purchaseReport;
+    if (this.activeView === 'special-receipts') return this.specialReceiptReport;
+    if (this.activeView === 'customer-report') return this.customerReport;
     return null;
   }
   get pageCount(): number {
@@ -1847,12 +1849,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       }
       if (this.activeView === 'special-receipts' && this.specialReceiptReport) {
         const data = this.specialReceiptReport;
+        const items = await this.loadAllPagedModuleItems('special-receipts', data);
         await this.downloadLocalExport(`special-receipts-${this.from}-to-${this.to}.csv`, [
           ['Special receipts'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
           ['Date', 'Reference', 'Customer', 'Sale type', 'Items', 'Payment', 'Cashier', 'Total'],
-          ...data.items.map((row) => [
+          ...items.map((row) => [
             row.salesDate,
             row.reference,
             row.customer,
@@ -1863,28 +1866,30 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
             row.totalAmount,
           ]),
         ], format, destination);
-        this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
+        this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
       if (this.activeView === 'customer-report' && this.customerReport) {
         const data = this.customerReport;
+        const items = await this.loadAllPagedModuleItems('customer-report', data);
         await this.downloadLocalExport(`customer-report-${this.from}-to-${this.to}.csv`, [
           ['Customer sales'],
           [`Date from: ${this.from}`, `Date to: ${this.to}`],
           [],
-          ['Date', 'Reference', 'Customer', 'Address', 'Group', 'Items', 'Net sales'],
-          ...data.items.map((row) => [
+          ['Date', 'Reference', 'Customer', 'Address', 'GAS', 'Group', 'Items', 'Net sales'],
+          ...items.map((row) => [
             row.salesDate,
             row.reference,
             row.customer,
             row.address,
+            row.gas,
             row.groupName,
             row.itemCount,
             row.totalAmount,
           ]),
         ], format, destination);
-        this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'record' : 'records'}.`;
+        this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
@@ -2152,8 +2157,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       view,
     );
   }
-  private isPagedModuleReport(view: ReportView): view is 'discount-report' | 'purchase-report' {
-    return view === 'discount-report' || view === 'purchase-report';
+  private isPagedModuleReport(
+    view: ReportView,
+  ): view is 'discount-report' | 'purchase-report' | 'special-receipts' | 'customer-report' {
+    return ['discount-report', 'purchase-report', 'special-receipts', 'customer-report'].includes(
+      view,
+    );
   }
   private moduleReportEndpoint(
     view: 'discount-report' | 'purchase-report' | 'special-receipts' | 'customer-report',
@@ -2166,7 +2175,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     }[view];
   }
   private async loadAllPagedModuleItems<T>(
-    view: 'discount-report' | 'purchase-report',
+    view: 'discount-report' | 'purchase-report' | 'special-receipts' | 'customer-report',
     current: PagedModuleReportData<T>,
   ): Promise<T[]> {
     if (current.page === 1 && current.items.length >= current.total) return current.items;

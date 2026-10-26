@@ -2851,7 +2851,35 @@
               </table>
             </div>
             <footer class="module-report-footer">
-              {{ receipts.items.length }} records, up to 500 shown
+              <span>
+                Showing
+                {{ receipts.items.length ? (receipts.page - 1) * receipts.pageSize + 1 : 0 }}–{{
+                  (receipts.page - 1) * receipts.pageSize + receipts.items.length
+                }}
+                of {{ receipts.total }}
+              </span>
+              <div aria-label="Special receipts pagination">
+                <button
+                  type="button"
+                  title="Previous special receipts page"
+                  aria-label="Previous special receipts page"
+                  [disabled]="receipts.page <= 1 || loading"
+                  (click)="changePage(-1)"
+                >
+                  <svg lucideChevronLeft aria-hidden="true"></svg>
+                </button>
+                <strong aria-current="page">{{ receipts.page }}</strong>
+                <span>of {{ pageCount }}</span>
+                <button
+                  type="button"
+                  title="Next special receipts page"
+                  aria-label="Next special receipts page"
+                  [disabled]="receipts.page >= pageCount || loading"
+                  (click)="changePage(1)"
+                >
+                  <svg lucideChevronRight aria-hidden="true"></svg>
+                </button>
+              </div>
             </footer>
           </section>
 
@@ -2876,6 +2904,7 @@
                     <th>Reference</th>
                     <th>Customer</th>
                     <th>Address</th>
+                    <th>GAS</th>
                     <th>Group</th>
                     <th>Items</th>
                     <th>Net sales</th>
@@ -2889,6 +2918,7 @@
                     </td>
                     <td>{{ row.customer }}</td>
                     <td>{{ row.address || '-' }}</td>
+                    <td>{{ row.gas || '-' }}</td>
                     <td>{{ row.groupName }}</td>
                     <td>{{ row.itemCount | number }}</td>
                     <td>
@@ -2896,7 +2926,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="!customers.items.length">
-                    <td colspan="7" class="module-empty">
+                    <td colspan="8" class="module-empty">
                       No customer sales were found in this date range.
                     </td>
                   </tr>
@@ -2904,7 +2934,35 @@
               </table>
             </div>
             <footer class="module-report-footer">
-              {{ customers.items.length }} records, up to 500 shown
+              <span>
+                Showing
+                {{ customers.items.length ? (customers.page - 1) * customers.pageSize + 1 : 0 }}–{{
+                  (customers.page - 1) * customers.pageSize + customers.items.length
+                }}
+                of {{ customers.total }}
+              </span>
+              <div aria-label="Customer report pagination">
+                <button
+                  type="button"
+                  title="Previous customer report page"
+                  aria-label="Previous customer report page"
+                  [disabled]="customers.page <= 1 || loading"
+                  (click)="changePage(-1)"
+                >
+                  <svg lucideChevronLeft aria-hidden="true"></svg>
+                </button>
+                <strong aria-current="page">{{ customers.page }}</strong>
+                <span>of {{ pageCount }}</span>
+                <button
+                  type="button"
+                  title="Next customer report page"
+                  aria-label="Next customer report page"
+                  [disabled]="customers.page >= pageCount || loading"
+                  (click)="changePage(1)"
+                >
+                  <svg lucideChevronRight aria-hidden="true"></svg>
+                </button>
+              </div>
             </footer>
           </section>
 
@@ -3280,8 +3338,9 @@
                   </tr>
                   <tr *ngIf="activeView === 'customers'">
                     <th scope="col">Customer</th>
-                    <th scope="col">Contact</th>
                     <th scope="col">Address</th>
+                    <th scope="col">GAS</th>
+                    <th scope="col">Contact</th>
                     <th scope="col">Status</th>
                     <th scope="col" class="number">Balance</th>
                     <th scope="col" class="number">Lent</th>
@@ -3489,8 +3548,9 @@
 
                     <ng-container *ngIf="activeView === 'customers'">
                       <td><strong>{{ row.name || '-' }}</strong><small>{{ row.email || 'No GAS' }}</small></td>
-                      <td>{{ row.contact || '-' }}</td>
                       <td>{{ row.address || '-' }}</td>
+                      <td>{{ row.email || '-' }}</td>
+                      <td>{{ row.contact || '-' }}</td>
                       <td><span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span></td>
                       <td class="number"><strong>{{ formatMoney(row.balance) }}</strong></td>
                       <td class="number">{{ row.lentQuantity || 0 }}</td>
@@ -3523,8 +3583,10 @@
                           ? 9
                           : activeView === 'balances'
                             ? 5
-                            : activeView === 'customers' || activeView === 'personnel'
-                              ? 7
+                            : activeView === 'customers'
+                              ? 8
+                              : activeView === 'personnel'
+                                ? 7
                             : activeView === 'sales'
                               ? 7
                               : 6

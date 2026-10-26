@@ -1689,12 +1689,20 @@ svg {
 .report-table-wrap td {
   height: 58px;
   max-width: 260px;
+  min-width: 0;
+  overflow: hidden;
   border-top: 1px solid var(--line-soft);
   padding: 10px 16px;
   color: #443d34;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.report-table-wrap td:not(.action-column) > * {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .report-table-wrap tbody tr:hover {

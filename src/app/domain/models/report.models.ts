@@ -156,6 +156,7 @@ export interface CustomerReportRecord {
   reference: string;
   customer: string;
   address: string;
+  gas: string;
   groupName: string;
   itemCount: number;
   totalAmount: number;
