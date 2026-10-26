@@ -88,6 +88,23 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+.addon-badge {
+  display: inline-flex;
+  min-height: 14px;
+  align-items: center;
+  border: 1px solid #e2c98f;
+  border-radius: 999px;
+  background: #fbf1df;
+  padding: 0 5px;
+  color: #b88a36;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .status-badge[data-status='completed'],
 .status-badge[data-status='confirmed'],
 .status-badge[data-status='active'] {

@@ -980,7 +980,7 @@ export interface BusinessOverviewData {
     storeId: string;
     storeName: string;
     severity: 'HIGH' | 'MEDIUM' | 'LOW';
-    type: 'SYNC' | 'INVENTORY' | 'RECEIVABLE' | 'DISCOUNT' | 'BACKUP';
+    type: 'SYNC' | 'INVENTORY' | 'RECEIVABLE' | 'DISCOUNT' | 'BACKUP' | 'OPERATIONS';
     title: string;
     detail: string;
     dismissible: boolean;

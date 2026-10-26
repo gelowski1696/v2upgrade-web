@@ -339,6 +339,10 @@ svg {
   color: #9f9585;
 }
 
+.portal-sidebar nav button .addon-badge {
+  margin-left: auto;
+}
+
 .portal-sidebar nav button:hover {
   background: #1d1914;
   color: #fff8ea;

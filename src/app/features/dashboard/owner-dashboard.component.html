@@ -47,6 +47,13 @@
           <svg *ngIf="item.icon === 'history'" lucideHistory aria-hidden="true"></svg>
           <svg *ngIf="item.icon === 'settings'" lucideSettings aria-hidden="true"></svg>
           <span>{{ item.label }}</span>
+          <span
+            *ngIf="isModNavigation(item.key)"
+            class="addon-badge"
+            title="Feature Mod"
+            aria-label="ADD-ON — Feature Mod"
+            >ADD-ON</span
+          >
         </button>
       </nav>
 

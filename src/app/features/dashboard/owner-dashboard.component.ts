@@ -419,6 +419,16 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     reports.splice(insertAt, 0, ...enabledReports);
     return reports;
   }
+  isModNavigation(view: ReportView): boolean {
+    return [
+      'discount-report',
+      'purchase-report',
+      'special-receipts',
+      'customer-report',
+      'inventory-summary',
+      'financial-report',
+    ].includes(view);
+  }
   get overview(): OverviewData | null {
     return this.activeView === 'overview' ? (this.response?.data as OverviewData) : null;
   }
