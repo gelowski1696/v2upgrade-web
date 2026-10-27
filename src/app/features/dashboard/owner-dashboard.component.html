@@ -39,6 +39,7 @@
         >
           <svg *ngIf="item.icon === 'overview'" lucideActivity aria-hidden="true"></svg>
           <svg *ngIf="item.icon === 'sales'" lucideShoppingCart aria-hidden="true"></svg>
+          <svg *ngIf="item.icon === 'chart'" lucideChartNoAxesColumnIncreasing aria-hidden="true"></svg>
           <svg *ngIf="item.icon === 'inventory'" lucideBoxes aria-hidden="true"></svg>
           <svg *ngIf="item.icon === 'transfers'" lucideTruck aria-hidden="true"></svg>
           <svg *ngIf="item.icon === 'balances'" lucideUsers aria-hidden="true"></svg>
@@ -256,7 +257,7 @@
                 title="Refresh report"
                 aria-label="Refresh report"
                 [disabled]="loading || exporting"
-                (click)="loadView()"
+                (click)="refreshView()"
               >
                 <svg [class.spin]="loading" lucideRefreshCw></svg>
               </button>
@@ -2971,6 +2972,101 @@
                 </button>
               </div>
             </footer>
+          </section>
+
+          <section
+            class="module-report peak-hours-web-report"
+            *ngIf="activeView === 'peak-hours' && peakHoursReport as peakHours"
+            aria-labelledby="peak-hours-report-title"
+          >
+            <header class="peak-hours-web-heading">
+              <div>
+                <p>HOURLY DEMAND</p>
+                <h2 id="peak-hours-report-title">Peak hours</h2>
+                <span>Plan cashier and rider coverage around actual transaction volume.</span>
+              </div>
+              <span class="addon-badge" title="Feature Mod" aria-label="ADD-ON — Feature Mod">ADD-ON</span>
+            </header>
+
+            <ng-container *ngIf="peakHours.items.length; else noWebPeakHours">
+              <dl class="peak-hours-web-summary" aria-label="Peak-hour summary">
+                <div class="peak-hours-primary-stat">
+                  <dt>Busiest hour</dt>
+                  <dd>{{ busiestPeakHour?.label || '—' }}</dd>
+                  <span>{{ busiestPeakHour?.transactions || 0 | number }} transactions</span>
+                </div>
+                <div>
+                  <dt>Total transactions</dt>
+                  <dd>{{ peakHours.totalTransactions | number }}</dd>
+                  <span>Across {{ peakHours.items.length | number }} active hours</span>
+                </div>
+                <div>
+                  <dt>Gross sales</dt>
+                  <dd>{{ formatMoney(peakHours.totalGrossSales) }}</dd>
+                  <span>Selected date range</span>
+                </div>
+                <div>
+                  <dt>Average volume</dt>
+                  <dd>{{ peakHourAverageTransactions | number: '1.1-1' }}</dd>
+                  <span>Transactions per active hour</span>
+                </div>
+              </dl>
+
+              <div class="peak-hours-web-workspace">
+                <section class="peak-hours-web-chart" aria-labelledby="peak-hours-chart-title">
+                  <header>
+                    <div>
+                      <h3 id="peak-hours-chart-title">Transactions by hour</h3>
+                      <span>Completed, non-cancelled sales.</span>
+                    </div>
+                    <span class="peak-hours-web-legend"><i aria-hidden="true"></i>Transactions</span>
+                  </header>
+                  <div class="peak-hours-web-scroll">
+                    <div class="peak-hours-web-bars" role="list" aria-label="Hourly transaction volume">
+                      <article
+                        class="peak-hours-web-bar"
+                        *ngFor="let row of peakHours.items; let index = index"
+                        [class.is-peak]="row === busiestPeakHour"
+                        [style.--peak-index]="index"
+                        [attr.aria-label]="row.label + ': ' + row.transactions + ' transactions, ' + formatMoney(row.grossSales) + ' gross sales'"
+                        [attr.title]="row.transactions + ' transactions · ' + formatMoney(row.grossSales)"
+                        role="listitem"
+                        tabindex="0"
+                      >
+                        <div class="peak-hours-web-stage" aria-hidden="true">
+                          <div class="peak-hours-web-column" [style.height.%]="peakHourBarHeight(row)">
+                            <span>{{ row.transactions | number }}</span>
+                            <i></i>
+                          </div>
+                        </div>
+                        <strong>{{ row.label }}</strong>
+                      </article>
+                    </div>
+                  </div>
+                </section>
+
+                <aside class="peak-hours-web-ranking" aria-labelledby="peak-hours-ranking-title">
+                  <p>CAPACITY SIGNAL</p>
+                  <h3 id="peak-hours-ranking-title">Top demand windows</h3>
+                  <span>Keep rider coverage strongest around these hours.</span>
+                  <ol>
+                    <li *ngFor="let row of topPeakHours; let rank = index">
+                      <b>{{ rank + 1 }}</b>
+                      <span><strong>{{ row.label }}</strong><small>{{ formatMoney(row.grossSales) }}</small></span>
+                      <span><strong>{{ row.transactions | number }}</strong><small>{{ peakHourTransactionShare(row) | number: '1.0-0' }}% of orders</small></span>
+                    </li>
+                  </ol>
+                </aside>
+              </div>
+            </ng-container>
+
+            <ng-template #noWebPeakHours>
+              <div class="peak-hours-web-empty">
+                <svg lucideChartNoAxesColumnIncreasing aria-hidden="true"></svg>
+                <strong>No hourly activity</strong>
+                <span>No completed sales were found in this date range.</span>
+              </div>
+            </ng-template>
           </section>
 
           <section

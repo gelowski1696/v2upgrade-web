@@ -21,6 +21,7 @@ export type ReportView =
   | 'purchase-report'
   | 'special-receipts'
   | 'customer-report'
+  | 'peak-hours'
   | 'scheduled-reports'
   | 'activity'
   | 'preferences';
@@ -103,7 +104,21 @@ export interface ReportCapabilitiesData {
     | 'purchase-report'
     | 'special-receipts'
     | 'customer-report'
+    | 'peak-hours'
   >;
+}
+
+export interface PeakHourRecord {
+  hour: number;
+  label: string;
+  transactions: number;
+  grossSales: number;
+}
+
+export interface PeakHoursReportData {
+  items: PeakHourRecord[];
+  totalTransactions: number;
+  totalGrossSales: number;
 }
 
 export interface ModuleReportData<T> {

@@ -10,6 +10,7 @@ import {
   LucideBoxes,
   LucideBuilding2,
   LucideCalendarDays,
+  LucideChartNoAxesColumnIncreasing,
   LucideChevronLeft,
   LucideChevronRight,
   LucideCircleAlert,
@@ -59,6 +60,8 @@ import {
   ModuleReportData,
   OverviewData,
   OverviewMetricKey,
+  PeakHourRecord,
+  PeakHoursReportData,
   PagedModuleReportData,
   PagedReportData,
   PaymentAnalysisData,
@@ -112,6 +115,7 @@ type ExportTarget = 'current' | 'customer-sales-history' | 'customer-lend-histor
     LucideBoxes,
     LucideBuilding2,
     LucideCalendarDays,
+    LucideChartNoAxesColumnIncreasing,
     LucideChevronLeft,
     LucideChevronRight,
     LucideCircleAlert,
@@ -138,6 +142,7 @@ type ExportTarget = 'current' | 'customer-sales-history' | 'customer-lend-histor
     './data-quality.css',
     './transfer-details.css',
     './module-reports.css',
+    './peak-hours-report.css',
     './scheduled-reports.css',
     './notification-center.css',
     './customer-personnel.css',
@@ -416,6 +421,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     if (this.reportEnabled('financial-report')) {
       enabledReports.push({ key: 'financial-report', label: 'Financial report', icon: 'cash' });
     }
+    if (this.reportEnabled('peak-hours')) {
+      enabledReports.push({ key: 'peak-hours', label: 'Peak hours', icon: 'chart' });
+    }
     reports.splice(insertAt, 0, ...enabledReports);
     return reports;
   }
@@ -427,6 +435,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       'customer-report',
       'inventory-summary',
       'financial-report',
+      'peak-hours',
     ].includes(view);
   }
   get overview(): OverviewData | null {
@@ -527,6 +536,43 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     return this.activeView === 'customer-report'
       ? (this.response?.data as PagedModuleReportData<CustomerReportRecord>)
       : null;
+  }
+  get peakHoursReport(): PeakHoursReportData | null {
+    return this.activeView === 'peak-hours'
+      ? (this.response?.data as PeakHoursReportData)
+      : null;
+  }
+  get busiestPeakHour(): PeakHourRecord | null {
+    return (this.peakHoursReport?.items ?? []).reduce<PeakHourRecord | null>(
+      (busiest, row) =>
+        !busiest || row.transactions > busiest.transactions ? row : busiest,
+      null,
+    );
+  }
+  get topPeakHours(): PeakHourRecord[] {
+    return [...(this.peakHoursReport?.items ?? [])]
+      .sort(
+        (left, right) =>
+          right.transactions - left.transactions ||
+          right.grossSales - left.grossSales ||
+          left.hour - right.hour,
+      )
+      .slice(0, 3);
+  }
+  get peakHourAverageTransactions(): number {
+    const data = this.peakHoursReport;
+    return data?.items.length ? data.totalTransactions / data.items.length : 0;
+  }
+  get peakHourMaximumTransactions(): number {
+    return Math.max(0, ...(this.peakHoursReport?.items.map((row) => row.transactions) ?? [0]));
+  }
+  peakHourBarHeight(row: PeakHourRecord): number {
+    if (!this.peakHourMaximumTransactions || !row.transactions) return 0;
+    return Math.max(8, (row.transactions / this.peakHourMaximumTransactions) * 100);
+  }
+  peakHourTransactionShare(row: PeakHourRecord): number {
+    const total = this.peakHoursReport?.totalTransactions ?? 0;
+    return total ? (row.transactions / total) * 100 : 0;
   }
   get financialLpgRows(): FinancialProductReportRow[] {
     return this.financialReport?.productRows.filter((row) => row.isLpgItem) ?? [];
@@ -636,6 +682,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       'purchase-report',
       'special-receipts',
       'customer-report',
+      'peak-hours',
       'customers',
       'personnel',
     ].includes(this.activeView);
@@ -813,6 +860,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     await this.loadView();
     this.analytics.feature('STORE_CHANGED', this.analyticsRoute(), this.selectedStoreId);
     this.analytics.pageView(this.analyticsRoute(), this.selectedStoreId);
+  }
+  async refreshView(): Promise<void> {
+    await this.loadReportCapabilities();
+    if (!this.navigation.some((item) => item.key === this.activeView)) {
+      this.activeView = 'overview';
+    }
+    await this.loadView();
+    if (this.activeView !== 'business') void this.loadOwnerAlerts();
   }
   async changePage(direction: number): Promise<void> {
     const next = this.page + direction;
@@ -1216,6 +1271,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
               ? await this.loadInventorySummaryReport(storeId)
               : view === 'financial-report'
                 ? await this.api.financialReport<FinancialReportData>(storeId, this.from, this.to)
+                : view === 'peak-hours'
+                  ? await this.api.moduleReport<PeakHoursReportData>(
+                      storeId,
+                      'peak-hours',
+                      this.from,
+                      this.to,
+                    )
                 : this.isSimpleModuleReport(view)
                   ? await this.api.moduleReport<ModuleReportData<unknown>>(
                       storeId,
@@ -1900,6 +1962,19 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ]),
         ], format, destination);
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
+        exportSucceeded = true;
+        return;
+      }
+      if (this.activeView === 'peak-hours' && this.peakHoursReport) {
+        const data = this.peakHoursReport;
+        await this.downloadLocalExport(`peak-hours-${this.from}-to-${this.to}.csv`, [
+          ['Peak hours'],
+          [`Date from: ${this.from}`, `Date to: ${this.to}`],
+          [],
+          ['Hour', 'Transactions', 'Gross sales'],
+          ...data.items.map((row) => [row.label, row.transactions, row.grossSales]),
+        ], format, destination);
+        this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'hour' : 'hours'}.`;
         exportSucceeded = true;
         return;
       }
