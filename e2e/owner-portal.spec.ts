@@ -1,5 +1,6 @@
 import { expect, Page, Request, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
 
 const user = {
   id: 'portal-user',
@@ -2411,7 +2412,10 @@ test('shows enabled Feature Mod reports without Feature Mods settings', async ({
 
   await page.goto('/');
   const selectReport = async (name: string) => {
-    await navigateToReport(page, name);
+    await page
+      .getByRole('navigation', { name: 'Business reports' })
+      .getByText(name, { exact: true })
+      .click();
   };
 
   const dateInputs = page.locator('.date-filter input[type="date"]');
@@ -2442,6 +2446,35 @@ test('shows enabled Feature Mod reports without Feature Mods settings', async ({
       from: '2026-09-10',
       to: '2026-09-10',
     });
+
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
+  const summaryRequestCount = summaryRequests.length;
+  const summaryDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export report' }).click();
+  await page
+    .getByRole('dialog', { name: 'Export report' })
+    .getByRole('button', { name: /^CSV/ })
+    .click();
+  const summaryDownload = await summaryDownloadPromise;
+  const summaryExportRequests = summaryRequests.slice(summaryRequestCount);
+  expect(summaryExportRequests).toHaveLength(12);
+  expect(summaryExportRequests[0]).toEqual({ from: '2026-09-09', to: '2026-09-09' });
+  expect(summaryExportRequests.at(-1)).toEqual({ from: '2026-09-20', to: '2026-09-20' });
+  expect(summaryExportRequests.every((request) => request.from === request.to)).toBe(true);
+  expect(summaryDownload.suggestedFilename()).toBe(
+    'inventory-summary-2026-09-09-to-2026-09-20.csv',
+  );
+  const summaryDownloadPath = await summaryDownload.path();
+  expect(summaryDownloadPath).not.toBeNull();
+  const summaryCsv = await readFile(summaryDownloadPath!, 'utf8');
+  expect(summaryCsv.match(/"Date: September \d+, 2026"/g)).toHaveLength(12);
+  const finalTotals = summaryCsv.slice(summaryCsv.indexOf('"FINAL TOTALS PER ITEM CODE"'));
+  expect(finalTotals).toContain(
+    '"LPG-11","11 kg LPG","4","1","5","60","24","12","0","0","0","2","1","3"',
+  );
+  await expect(page.getByText('Exported 12 daily records across 12 days.')).toBeVisible();
 
   await selectReport('Financial report');
   await expect(

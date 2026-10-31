@@ -57,6 +57,7 @@ import {
   InventoryRecord,
   InventoryReportData,
   InventorySummaryReportData,
+  InventorySummaryReportRow,
   ModuleReportData,
   OverviewData,
   OverviewMetricKey,
@@ -1778,49 +1779,16 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.clearExportFeedback();
     try {
       if (this.activeView === 'inventory-summary' && this.inventorySummaryReport) {
-        const data = this.inventorySummaryReport;
-        const rows: Array<Array<string | number>> = [
-          ['Inventory monitoring summary'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [`Report date: ${this.inventorySummaryDate}`],
-          [`Opening count: ${data.openingSnapshotDate || 'Not recorded'}`],
-          [`Actual count: ${data.actualSnapshotDate || 'Not recorded'}`],
-          [],
-          [
-            'Item code',
-            'Item',
-            'Opening filled',
-            'Opening empty',
-            'Opening total',
-            'Deliveries',
-            'Sales',
-            'Refill',
-            'Pull out',
-            'Defective',
-            'Backload',
-            'Actual filled',
-            'Actual empty',
-            'Actual total',
-          ],
-          ...data.rows.map((row) => [
-            row.itemCode,
-            row.itemName,
-            row.openingFilled,
-            row.openingEmpty,
-            row.openingFilled + row.openingEmpty,
-            row.deliveries,
-            row.sales,
-            row.refill,
-            row.pullOut,
-            row.defective,
-            row.backload,
-            row.actualFilled,
-            row.actualEmpty,
-            row.actualFilled + row.actualEmpty,
-          ]),
-        ];
-        await this.downloadLocalExport(`inventory-summary-${this.inventorySummaryDate}.csv`, rows, format, destination);
-        this.exportStatus = `Exported ${data.rows.length} ${data.rows.length === 1 ? 'record' : 'records'}.`;
+        const exported = await this.buildInventorySummaryRangeExport(this.selectedStoreId);
+        await this.downloadLocalExport(
+          `inventory-summary-${this.from}-to-${this.to}.csv`,
+          exported.rows,
+          format,
+          destination,
+        );
+        this.exportStatus = `Exported ${exported.recordCount} daily ${
+          exported.recordCount === 1 ? 'record' : 'records'
+        } across ${exported.dayCount} ${exported.dayCount === 1 ? 'day' : 'days'}.`;
         exportSucceeded = true;
         return;
       }
@@ -2757,6 +2725,135 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   private clearExportFeedback(): void {
     this.exportError = '';
     this.exportStatus = '';
+  }
+  private async buildInventorySummaryRangeExport(storeId: string): Promise<{
+    rows: Array<Array<string | number>>;
+    recordCount: number;
+    dayCount: number;
+  }> {
+    if (!this.from || !this.to) throw new Error('Select both From and To dates before exporting.');
+    if (this.from > this.to) throw new Error('The From date cannot be after the To date.');
+
+    const reports: Array<{ date: string; rows: InventorySummaryReportRow[] }> = [];
+    for (let date = this.from; date <= this.to; date = this.shiftIsoDate(date, 1)) {
+      const response = await this.api.inventorySummaryReport<InventorySummaryReportData>(
+        storeId,
+        date,
+        date,
+      );
+      reports.push({
+        date,
+        rows: [...response.data.rows].sort(
+          (left, right) =>
+            left.itemName.localeCompare(right.itemName, undefined, {
+              numeric: true,
+              sensitivity: 'base',
+            }) ||
+            left.itemCode.localeCompare(right.itemCode, undefined, {
+              numeric: true,
+              sensitivity: 'base',
+            }),
+        ),
+      });
+    }
+
+    const groupHeader = ['', '', 'OPENING', '', '', 'RETURN', '', '', '', '', '', 'ACTUAL', '', ''];
+    const columnHeader = [
+      'Item code',
+      'Item',
+      'Filled',
+      'Empty',
+      'Total',
+      'Deliveries',
+      'Sales',
+      'Refill',
+      'Pull out',
+      'Defective',
+      'Backload',
+      'Filled',
+      'Empty',
+      'Total',
+    ];
+    const rows: Array<Array<string | number>> = [
+      ['Inventory monitoring summary'],
+      [
+        `Date from: ${this.formatSummaryDate(this.from)}`,
+        `Date to: ${this.formatSummaryDate(this.to)}`,
+      ],
+      [],
+    ];
+    const totals = new Map<string, InventorySummaryReportRow>();
+
+    for (const report of reports) {
+      rows.push(
+        [`Date: ${this.formatSummaryDate(report.date)}`],
+        [],
+        groupHeader,
+        columnHeader,
+        ...report.rows.map((row) => this.inventorySummaryExportRow(row)),
+        [],
+      );
+      for (const row of report.rows) {
+        const total = totals.get(row.itemCode);
+        if (!total) {
+          totals.set(row.itemCode, { ...row });
+          continue;
+        }
+        total.deliveries += row.deliveries;
+        total.sales += row.sales;
+        total.refill += row.refill;
+        total.pullOut += row.pullOut;
+        total.defective += row.defective;
+        total.backload += row.backload;
+        total.actualFilled = row.actualFilled;
+        total.actualEmpty = row.actualEmpty;
+        total.itemName = row.itemName;
+      }
+    }
+
+    if (totals.size) {
+      const totalRows = [...totals.values()].sort(
+        (left, right) =>
+          left.itemName.localeCompare(right.itemName, undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          }) ||
+          left.itemCode.localeCompare(right.itemCode, undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          }),
+      );
+      rows.push(
+        ['FINAL TOTALS PER ITEM CODE'],
+        groupHeader,
+        columnHeader,
+        ...totalRows.map((row) => this.inventorySummaryExportRow(row)),
+      );
+    }
+
+    return {
+      rows,
+      recordCount: reports.reduce((total, report) => total + report.rows.length, 0),
+      dayCount: reports.length,
+    };
+  }
+  private inventorySummaryExportRow(row: InventorySummaryReportRow): Array<string | number> {
+    return [
+      row.itemCode || '-',
+      row.itemName || '-',
+      row.openingFilled,
+      row.openingEmpty,
+      row.openingFilled + row.openingEmpty,
+      row.deliveries,
+      row.sales,
+      row.refill,
+      row.pullOut,
+      row.defective,
+      row.backload,
+      row.actualFilled,
+      row.actualEmpty,
+      row.actualFilled + row.actualEmpty,
+    ];
   }
   private loadInventorySummaryReport(
     storeId: string,
