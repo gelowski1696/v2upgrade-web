@@ -440,6 +440,16 @@ export class PortalApiService {
     if (storeId) query.set('storeId', storeId);
     return this.get(`/portal/activity?${query.toString()}`);
   }
+  recordExportActivity<T>(input: {
+    storeId: string;
+    report: string;
+    format: 'csv' | 'pdf';
+    from: string;
+    to: string;
+    rowCount?: number;
+  }): Promise<T> {
+    return this.authorized<T>('POST', '/portal/activity/export', input);
+  }
   updateOverviewPreferences<T>(overviewMetrics: string[]): Promise<T> {
     return this.authorized('PUT', '/portal/preferences/overview', { overviewMetrics });
   }

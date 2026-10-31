@@ -1971,6 +1971,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     } finally {
       if (exportSucceeded) {
         this.analytics.feature('REPORT_EXPORTED', this.analyticsRoute(), this.selectedStoreId);
+        void this.api.recordExportActivity({
+          storeId: this.selectedStoreId,
+          report,
+          format,
+          from: this.from,
+          to: this.to,
+        }).catch(() => undefined);
       }
       this.exporting = false;
       this.changeDetector.detectChanges();
