@@ -52,19 +52,6 @@ The suite starts an isolated dashboard server and checks activation, login, pass
 session management, password changes, store-scoped reporting, profitability comparisons and CSV
 exports, responsive layouts, and access-token refresh on desktop and mobile Chromium.
 
-## Continuous integration
-
-GitHub Actions builds and verifies the production bundle, runs the complete desktop/mobile
-Playwright suite, audits npm dependencies, scans repository history for secrets, builds the runtime
-container, and blocks fixed high or critical image vulnerabilities. Browser traces, screenshots,
-and the HTML report are retained for seven days when the browser job fails.
-
-Protect `main` in the GitHub repository settings and require these checks before merging:
-
-- Build and browser tests
-- Dependency and secret scan
-- Container build and scan
-
 ## Access Flow
 
 1. In the POS desktop app, open Settings > Online dashboard.
