@@ -647,6 +647,7 @@ export interface CustomerPurchaseHistoryData extends PagedReportData<{
   id: number;
   saleDate: string;
   reference: string;
+  category: string;
   payment: string;
   status: string;
   itemCount: number;

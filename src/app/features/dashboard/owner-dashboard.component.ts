@@ -2106,6 +2106,17 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   saleRecordedProfit(sale: SaleRecord): number {
     return this.numberValue(sale.totalAmount) - this.numberValue(sale.totalCost);
   }
+  saleCategoryLabel(value: unknown): string {
+    const category = String(value ?? '')
+      .trim()
+      .replace(/^\d+\s*-\s*/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ');
+    const normalized = category.toUpperCase();
+    if (normalized === 'DELIVERY') return 'Delivery';
+    if (normalized === 'PICK UP' || normalized === 'PICKUP') return 'Pick up';
+    return category || 'Not recorded';
+  }
   formatMoney(value: unknown): string {
     return this.moneyFormatter.format(this.numberValue(value));
   }

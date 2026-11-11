@@ -3385,6 +3385,7 @@
                     <th scope="col">Date</th>
                     <th scope="col">Reference</th>
                     <th scope="col">Customer</th>
+                    <th scope="col">Category</th>
                     <th scope="col">Payment</th>
                     <th scope="col">Status</th>
                     <th scope="col" class="number">Total</th>
@@ -3505,6 +3506,7 @@
                         <strong>{{ row.reference || '-' }}</strong>
                       </td>
                       <td>{{ row.customer || 'Walk-in' }}</td>
+                      <td>{{ saleCategoryLabel(row.category) }}</td>
                       <td>{{ row.payment || '-' }}</td>
                       <td>
                         <span
@@ -3691,7 +3693,7 @@
                               : activeView === 'personnel'
                                 ? 7
                             : activeView === 'sales'
-                              ? 7
+                              ? 8
                               : 6
                       "
                     >
@@ -4908,6 +4910,7 @@
                   <tr>
                     <th scope="col">Date</th>
                     <th scope="col">Reference</th>
+                    <th scope="col">Category</th>
                     <th scope="col">Payment</th>
                     <th scope="col" class="number">Items</th>
                     <th scope="col" class="number">Total</th>
@@ -4920,6 +4923,7 @@
                     <td>
                       <strong>{{ sale.reference || '-' }}</strong>
                     </td>
+                    <td>{{ saleCategoryLabel(sale.category) }}</td>
                     <td>
                       {{ sale.payment || '-' }}
                       <small>{{ sale.status || '-' }}</small>
@@ -5358,10 +5362,10 @@
 
       <div class="directory-table" *ngIf="!customerDirectoryLoading && !customerDirectoryError">
         <table *ngIf="customerDirectoryTab === 'sales' && customerDirectorySales as history">
-          <thead><tr><th>Date</th><th>Reference</th><th>Payment</th><th>Status</th><th class="number">Items</th><th class="number">Total</th></tr></thead>
+          <thead><tr><th>Date</th><th>Reference</th><th>Category</th><th>Payment</th><th>Status</th><th class="number">Items</th><th class="number">Total</th></tr></thead>
           <tbody>
-            <tr *ngFor="let row of history.data.items"><td>{{ row.saleDate | date: 'medium' }}</td><td><strong>{{ row.reference || '-' }}</strong></td><td>{{ row.payment || '-' }}</td><td>{{ row.status || '-' }}</td><td class="number">{{ row.itemCount }}</td><td class="number">{{ formatMoney(row.totalAmount) }}</td></tr>
-            <tr *ngIf="!history.data.items.length"><td colspan="6" class="directory-empty">No sales in this date range.</td></tr>
+            <tr *ngFor="let row of history.data.items"><td>{{ row.saleDate | date: 'medium' }}</td><td><strong>{{ row.reference || '-' }}</strong></td><td>{{ saleCategoryLabel(row.category) }}</td><td>{{ row.payment || '-' }}</td><td>{{ row.status || '-' }}</td><td class="number">{{ row.itemCount }}</td><td class="number">{{ formatMoney(row.totalAmount) }}</td></tr>
+            <tr *ngIf="!history.data.items.length"><td colspan="7" class="directory-empty">No sales in this date range.</td></tr>
           </tbody>
         </table>
         <table *ngIf="customerDirectoryTab === 'lend' && customerDirectoryLend as history">

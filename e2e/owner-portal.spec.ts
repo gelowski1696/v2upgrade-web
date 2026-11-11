@@ -360,6 +360,101 @@ test('signs in, opens sales, and changes pages without losing the store scope', 
   await expect(page.getByLabel(/^Store/)).toHaveValue(store.id);
 });
 
+test('shows the pickup or delivery category in sales history', async ({ page }) => {
+  await seedSession(page);
+  await mockReports(page, async (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET' && path.endsWith('/customers')) {
+      return {
+        json: fresh({
+          items: [
+            {
+              id: 1,
+              name: 'Customer One',
+              address: 'Test address',
+              contact: '09170000000',
+              email: 'GAS-1',
+              joinedAt: '2026-01-01T00:00:00.000Z',
+              balance: 0,
+              lentQuantity: 0,
+              status: 'active',
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 25,
+        }),
+      };
+    }
+    if (request.method() === 'GET' && path.endsWith('/customers/1/purchase-history')) {
+      return {
+        json: fresh({
+          range: { from: '2026-09-01', to: '2026-09-30' },
+          customer: {
+            id: 1,
+            name: 'Customer One',
+            contact: '09170000000',
+            balance: 0,
+            status: 'active',
+          },
+          summary: {
+            visitCount: 2,
+            recordedSpend: 325,
+            averagePurchase: 162.5,
+            firstPurchaseDate: '2026-09-01T00:00:00.000Z',
+            lastPurchaseDate: '2026-09-02T00:00:00.000Z',
+          },
+          items: [
+            {
+              id: 10,
+              saleDate: '2026-09-02T00:00:00.000Z',
+              reference: 'CUSTOMER-DELIVERY',
+              category: '2-DELIVERY',
+              payment: 'CASH',
+              status: 'COMPLETED',
+              itemCount: 1,
+              totalAmount: 200,
+              tenderBalance: 0,
+            },
+            {
+              id: 11,
+              saleDate: '2026-09-01T00:00:00.000Z',
+              reference: 'CUSTOMER-PICKUP',
+              category: '1-PICK UP',
+              payment: 'CASH',
+              status: 'COMPLETED',
+              itemCount: 1,
+              totalAmount: 125,
+              tenderBalance: 0,
+            },
+          ],
+          total: 2,
+          page: 1,
+          pageSize: 25,
+        }),
+      };
+    }
+    return undefined;
+  });
+
+  await page.goto('/');
+  await navigateToReport(page, 'Sales');
+
+  const salesTable = page.locator('.report-table-wrap table');
+  await expect(salesTable.getByRole('columnheader', { name: 'Category' })).toBeVisible();
+  await expect(salesTable.getByText('Pick up', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(salesTable.getByText('Delivery', { exact: true })).toBeVisible();
+
+  await navigateToReport(page, 'Customers');
+  await page.getByRole('button', { name: 'View customer Customer One' }).click();
+  const customerHistory = page.getByRole('dialog', { name: 'Customer One' });
+  await expect(customerHistory.getByRole('columnheader', { name: 'Category' })).toBeVisible();
+  await expect(customerHistory.getByText('Pick up', { exact: true })).toBeVisible();
+  await expect(customerHistory.getByText('Delivery', { exact: true })).toBeVisible();
+});
+
 test('debounces report search, resets paging, and clears sales filters', async ({ page }) => {
   await seedSession(page);
   const filteredUrls: string[] = [];
@@ -655,7 +750,7 @@ test('exports every matching report row with the selected store and dates', asyn
       return {
         json: fresh({
           fileName: 'main-lpg-store-sales-2026-09-01-to-2026-09-30.csv',
-          content: '\uFEFFDate,Reference,Total\r\n2026-09-30,SALE-1,125\r\n',
+          content: '\uFEFFDate,Reference,Total,Category\r\n2026-09-30,SALE-1,125,Delivery\r\n',
           rowCount: 26,
         }),
       };
@@ -682,6 +777,11 @@ test('exports every matching report row with the selected store and dates', asyn
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('main-lpg-store-sales-2026-09-01-to-2026-09-30.csv');
+  const downloadedCsv = await download.path();
+  expect(downloadedCsv).not.toBeNull();
+  const downloadedContent = await readFile(downloadedCsv!, 'utf8');
+  expect(downloadedContent).toContain('Reference,Total,Category');
+  expect(downloadedContent).toContain('SALE-1,125,Delivery');
   await expect(page.getByText('Exported 26 records.')).toBeVisible();
   expect(exportRequests).toBe(1);
   const requested = new URL(exportUrl);
@@ -2862,6 +2962,7 @@ async function mockReports(
                 saleDate: '2026-09-30T10:00:00.000Z',
                 reference: `SALE-PAGE-${pageNumber}`,
                 customer: 'Test Customer',
+                category: pageNumber === 1 ? '1-PICK UP' : '2-DELIVERY',
                 payment: 'CASH',
                 status: 'COMPLETED',
                 totalAmount: pageNumber * 100,
