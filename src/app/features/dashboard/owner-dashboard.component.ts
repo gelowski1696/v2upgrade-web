@@ -31,7 +31,12 @@ import {
 } from '@lucide/angular';
 import { PortalApiService } from '../../core/api/portal-api.service';
 import { WebAnalyticsCollector } from '../../core/analytics/web-analytics.collector';
-import { FreshResponse, PortalStore } from '../../domain/models/portal.models';
+import {
+  FreshResponse,
+  PortalRole,
+  PortalStore,
+  PortalTenantUser,
+} from '../../domain/models/portal.models';
 import {
   BusinessOverviewData,
   CashFlowData,
@@ -192,6 +197,19 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   branchError = '';
   branchStatus = '';
   branchForm = { code: '', name: '', timezone: 'Asia/Manila' };
+  peopleManagerOpen = false;
+  peopleLoading = false;
+  peopleBusy = false;
+  peopleError = '';
+  peopleStatus = '';
+  tenantUsers: PortalTenantUser[] = [];
+  peopleForm: { username: string; displayName: string; role: PortalRole } = {
+    username: '',
+    displayName: '',
+    role: 'MANAGER',
+  };
+  inviteStoreIds = new Set<string>();
+  invitationToken = '';
   loading = false;
   error = '';
   exporting = false;
@@ -549,14 +567,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       : null;
   }
   get peakHoursReport(): PeakHoursReportData | null {
-    return this.activeView === 'peak-hours'
-      ? (this.response?.data as PeakHoursReportData)
-      : null;
+    return this.activeView === 'peak-hours' ? (this.response?.data as PeakHoursReportData) : null;
   }
   get busiestPeakHour(): PeakHourRecord | null {
     return (this.peakHoursReport?.items ?? []).reduce<PeakHourRecord | null>(
-      (busiest, row) =>
-        !busiest || row.transactions > busiest.transactions ? row : busiest,
+      (busiest, row) => (!busiest || row.transactions > busiest.transactions ? row : busiest),
       null,
     );
   }
@@ -791,6 +806,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.dismissTransferDetails(false);
     this.securityOpen = false;
     this.closeBranchManager();
+    this.closePeopleManager();
     this.changeDetector.detectChanges();
   }
   async handleSessionEnded(): Promise<void> {
@@ -824,7 +840,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.branchManagerOpen = true;
     this.branchError = '';
     this.branchStatus = '';
-    this.branchForm = { code: '', name: '', timezone: this.selectedStore?.timezone || 'Asia/Manila' };
+    this.branchForm = {
+      code: '',
+      name: '',
+      timezone: this.selectedStore?.timezone || 'Asia/Manila',
+    };
   }
   closeBranchManager(): void {
     if (this.branchBusy) return;
@@ -861,6 +881,75 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.branchError = this.message(error, 'The branch could not be created.');
     } finally {
       this.branchBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async openPeopleManager(): Promise<void> {
+    if (!this.canManageBranches) return;
+    this.peopleManagerOpen = true;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+    this.inviteStoreIds = new Set(this.stores.map((store) => store.id));
+    await this.loadTenantUsers();
+  }
+  closePeopleManager(): void {
+    if (this.peopleBusy) return;
+    this.peopleManagerOpen = false;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+  }
+  toggleInviteStore(storeId: string, selected: boolean): void {
+    const next = new Set(this.inviteStoreIds);
+    if (selected) next.add(storeId);
+    else next.delete(storeId);
+    this.inviteStoreIds = next;
+  }
+  async createTenantInvitation(): Promise<void> {
+    if (
+      !this.canManageBranches ||
+      this.peopleBusy ||
+      !this.peopleForm.username.trim() ||
+      !this.peopleForm.displayName.trim() ||
+      !this.inviteStoreIds.size
+    )
+      return;
+    this.peopleBusy = true;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+    try {
+      const result = await this.api.createTenantUserInvitation({
+        username: this.peopleForm.username.trim().toLowerCase(),
+        displayName: this.peopleForm.displayName.trim(),
+        role: this.peopleForm.role,
+        storeIds: [...this.inviteStoreIds],
+      });
+      this.invitationToken = result.invitation.activationToken;
+      this.peopleStatus = `Invitation created for ${result.invitation.username}.`;
+      this.peopleForm = { username: '', displayName: '', role: 'MANAGER' };
+      await this.loadTenantUsers();
+    } catch (error) {
+      this.peopleError = this.message(error, 'The user invitation could not be created.');
+    } finally {
+      this.peopleBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async copyInvitationToken(): Promise<void> {
+    if (!this.invitationToken) return;
+    await navigator.clipboard.writeText(this.invitationToken);
+    this.peopleStatus = 'Activation token copied.';
+  }
+  private async loadTenantUsers(): Promise<void> {
+    this.peopleLoading = true;
+    try {
+      this.tenantUsers = await this.api.tenantUsers();
+    } catch (error) {
+      this.peopleError = this.message(error, 'Tenant users could not be loaded.');
+    } finally {
+      this.peopleLoading = false;
       this.changeDetector.detectChanges();
     }
   }
@@ -1335,82 +1424,78 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
                       this.from,
                       this.to,
                     )
-                : this.isSimpleModuleReport(view)
-                  ? await this.api.moduleReport<ModuleReportData<unknown>>(
-                      storeId,
-                      this.moduleReportEndpoint(view),
-                      this.from,
-                      this.to,
-                      this.isPagedModuleReport(view) ? page : undefined,
-                    )
-                  : view === 'overview'
-                    ? await this.api.overview(storeId, this.from, this.to)
-                    : view === 'cash-flow'
-                      ? await this.api.cashFlow(storeId, this.from, this.to)
-                      : view === 'restocks'
-                        ? await this.api.restockMonitoring<RestockMonitoringData>(
-                            storeId,
-                            this.from,
-                            this.to,
-                            page,
-                            this.search,
-                          )
-                        : view === 'products'
-                          ? await this.api.productPerformance<ProductPerformanceData>(
+                  : this.isSimpleModuleReport(view)
+                    ? await this.api.moduleReport<ModuleReportData<unknown>>(
+                        storeId,
+                        this.moduleReportEndpoint(view),
+                        this.from,
+                        this.to,
+                        this.isPagedModuleReport(view) ? page : undefined,
+                      )
+                    : view === 'overview'
+                      ? await this.api.overview(storeId, this.from, this.to)
+                      : view === 'cash-flow'
+                        ? await this.api.cashFlow(storeId, this.from, this.to)
+                        : view === 'restocks'
+                          ? await this.api.restockMonitoring<RestockMonitoringData>(
                               storeId,
                               this.from,
                               this.to,
+                              page,
+                              this.search,
                             )
-                          : view === 'profitability'
-                            ? await this.api.profitability<ProfitabilityData>(
+                          : view === 'products'
+                            ? await this.api.productPerformance<ProductPerformanceData>(
                                 storeId,
                                 this.from,
                                 this.to,
-                                page,
-                                filters,
                               )
-                            : view === 'customer-insights'
-                              ? await this.api.customerInsights<CustomerInsightsData>(
+                            : view === 'profitability'
+                              ? await this.api.profitability<ProfitabilityData>(
                                   storeId,
                                   this.from,
                                   this.to,
                                   page,
                                   filters,
                                 )
-                              : view === 'customers'
-                                ? await this.api.customers<PagedReportData<CustomerDirectoryRecord>>(
-                                    storeId,
-                                    page,
-                                    filters,
-                                  )
-                                : view === 'personnel'
-                                  ? await this.api.personnel<PagedReportData<PersonnelDirectoryRecord>>(
-                                      storeId,
-                                      page,
-                                      filters,
-                                    )
-                              : view === 'inventory-forecast'
-                                ? await this.api.inventoryForecast<InventoryForecastData>(
+                              : view === 'customer-insights'
+                                ? await this.api.customerInsights<CustomerInsightsData>(
                                     storeId,
                                     this.from,
                                     this.to,
                                     page,
                                     filters,
                                   )
-                                : view === 'payments'
-                                  ? await this.api.paymentAnalysis<PaymentAnalysisData>(
-                                      storeId,
-                                      this.from,
-                                      this.to,
-                                    )
-                                  : await this.api.report(
-                                      storeId,
-                                      view === 'balances' ? 'customer-balances' : view,
-                                      this.from,
-                                      this.to,
-                                      page,
-                                      filters,
-                                    );
+                                : view === 'customers'
+                                  ? await this.api.customers<
+                                      PagedReportData<CustomerDirectoryRecord>
+                                    >(storeId, page, filters)
+                                  : view === 'personnel'
+                                    ? await this.api.personnel<
+                                        PagedReportData<PersonnelDirectoryRecord>
+                                      >(storeId, page, filters)
+                                    : view === 'inventory-forecast'
+                                      ? await this.api.inventoryForecast<InventoryForecastData>(
+                                          storeId,
+                                          this.from,
+                                          this.to,
+                                          page,
+                                          filters,
+                                        )
+                                      : view === 'payments'
+                                        ? await this.api.paymentAnalysis<PaymentAnalysisData>(
+                                            storeId,
+                                            this.from,
+                                            this.to,
+                                          )
+                                        : await this.api.report(
+                                            storeId,
+                                            view === 'balances' ? 'customer-balances' : view,
+                                            this.from,
+                                            this.to,
+                                            page,
+                                            filters,
+                                          );
       if (requestId !== this.reportRequest) return;
       this.response = response;
       if (view === 'business') {
@@ -1758,13 +1843,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.customerDirectoryError = '';
     try {
       if (this.customerDirectoryTab === 'sales') {
-        this.customerDirectorySales = await this.api.customerPurchaseHistory<CustomerPurchaseHistoryData>(
-          this.selectedStoreId,
-          customer.id,
-          this.from,
-          this.to,
-          this.customerDirectoryHistoryPage,
-        );
+        this.customerDirectorySales =
+          await this.api.customerPurchaseHistory<CustomerPurchaseHistoryData>(
+            this.selectedStoreId,
+            customer.id,
+            this.from,
+            this.to,
+            this.customerDirectoryHistoryPage,
+          );
       } else {
         this.customerDirectoryLend = await this.api.customerLendHistory<CustomerLendHistoryData>(
           this.selectedStoreId,
@@ -1828,7 +1914,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ? 'customer-balances'
           : this.activeView
         : this.exportTarget;
-    const destination = await this.prepareExportDestination(`${report}-${this.from}-to-${this.to}.${format}`, format);
+    const destination = await this.prepareExportDestination(
+      `${report}-${this.from}-to-${this.to}.${format}`,
+      format,
+    );
     if (destination === undefined) return;
     this.exporting = true;
     let exportSucceeded = false;
@@ -1894,7 +1983,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ['Total salary', data.cashFlow.salaryPaid],
           ['Net amount', this.financialNetAmount],
         ];
-        await this.downloadLocalExport(`financial-report-${this.from}-to-${this.to}.csv`, rows, format, destination);
+        await this.downloadLocalExport(
+          `financial-report-${this.from}-to-${this.to}.csv`,
+          rows,
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${data.productRows.length} ${data.productRows.length === 1 ? 'product' : 'products'}.`;
         exportSucceeded = true;
         return;
@@ -1902,21 +1996,26 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'discount-report' && this.discountReport) {
         const data = this.discountReport;
         const items = await this.loadAllPagedModuleItems('discount-report', data);
-        await this.downloadLocalExport(`discount-report-${this.from}-to-${this.to}.csv`, [
-          ['Discount history'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Cashier', 'Regular', 'Special', 'Total'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.cashier,
-            row.regularDiscount,
-            row.specialDiscount,
-            row.totalDiscount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `discount-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Discount history'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Cashier', 'Regular', 'Special', 'Total'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.cashier,
+              row.regularDiscount,
+              row.specialDiscount,
+              row.totalDiscount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1924,21 +2023,26 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'purchase-report' && this.purchaseReport) {
         const data = this.purchaseReport;
         const items = await this.loadAllPagedModuleItems('purchase-report', data);
-        await this.downloadLocalExport(`purchase-report-${this.from}-to-${this.to}.csv`, [
-          ['Purchase history'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Supplier', 'Driver', 'Type', 'Items', 'Purchase amount'],
-          ...items.map((row) => [
-            row.purchaseDate,
-            row.reference,
-            row.supplier,
-            row.driver,
-            row.purchaseType,
-            row.totalQuantity,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `purchase-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Purchase history'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Supplier', 'Driver', 'Type', 'Items', 'Purchase amount'],
+            ...items.map((row) => [
+              row.purchaseDate,
+              row.reference,
+              row.supplier,
+              row.driver,
+              row.purchaseType,
+              row.totalQuantity,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1946,22 +2050,27 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'special-receipts' && this.specialReceiptReport) {
         const data = this.specialReceiptReport;
         const items = await this.loadAllPagedModuleItems('special-receipts', data);
-        await this.downloadLocalExport(`special-receipts-${this.from}-to-${this.to}.csv`, [
-          ['Special receipts'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Sale type', 'Items', 'Payment', 'Cashier', 'Total'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.saleType,
-            row.itemCount,
-            row.paymentMethod,
-            row.cashier,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `special-receipts-${this.from}-to-${this.to}.csv`,
+          [
+            ['Special receipts'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Sale type', 'Items', 'Payment', 'Cashier', 'Total'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.saleType,
+              row.itemCount,
+              row.paymentMethod,
+              row.cashier,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -1969,35 +2078,45 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'customer-report' && this.customerReport) {
         const data = this.customerReport;
         const items = await this.loadAllPagedModuleItems('customer-report', data);
-        await this.downloadLocalExport(`customer-report-${this.from}-to-${this.to}.csv`, [
-          ['Customer sales'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Address', 'GAS', 'Group', 'Items', 'Net sales'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.address,
-            row.gas,
-            row.groupName,
-            row.itemCount,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `customer-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Customer sales'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Address', 'GAS', 'Group', 'Items', 'Net sales'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.address,
+              row.gas,
+              row.groupName,
+              row.itemCount,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
       if (this.activeView === 'peak-hours' && this.peakHoursReport) {
         const data = this.peakHoursReport;
-        await this.downloadLocalExport(`peak-hours-${this.from}-to-${this.to}.csv`, [
-          ['Peak hours'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Hour', 'Transactions', 'Gross sales'],
-          ...data.items.map((row) => [row.label, row.transactions, row.grossSales]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `peak-hours-${this.from}-to-${this.to}.csv`,
+          [
+            ['Peak hours'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Hour', 'Transactions', 'Gross sales'],
+            ...data.items.map((row) => [row.label, row.transactions, row.grossSales]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'hour' : 'hours'}.`;
         exportSucceeded = true;
         return;
@@ -2023,17 +2142,22 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       }.`;
       exportSucceeded = true;
     } catch (error) {
-      this.exportError = this.message(error, `The ${format.toUpperCase()} export could not be created.`);
+      this.exportError = this.message(
+        error,
+        `The ${format.toUpperCase()} export could not be created.`,
+      );
     } finally {
       if (exportSucceeded) {
         this.analytics.feature('REPORT_EXPORTED', this.analyticsRoute(), this.selectedStoreId);
-        void this.api.recordExportActivity({
-          storeId: this.selectedStoreId,
-          report,
-          format,
-          from: this.from,
-          to: this.to,
-        }).catch(() => undefined);
+        void this.api
+          .recordExportActivity({
+            storeId: this.selectedStoreId,
+            report,
+            format,
+            from: this.from,
+            to: this.to,
+          })
+          .catch(() => undefined);
       }
       this.exporting = false;
       this.changeDetector.detectChanges();
@@ -2665,10 +2789,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     try {
       const handle = await pickerWindow.showSaveFilePicker({
         suggestedName: suggestedName.replace(/[\\/:*?"<>|]/g, '-'),
-        types: [{
-          description: `${format.toUpperCase()} file`,
-          accept: { [format === 'pdf' ? 'application/pdf' : 'text/csv']: [`.${format}`] },
-        }],
+        types: [
+          {
+            description: `${format.toUpperCase()} file`,
+            accept: { [format === 'pdf' ? 'application/pdf' : 'text/csv']: [`.${format}`] },
+          },
+        ],
       });
       return async (blob: Blob) => {
         const writable = await handle.createWritable();
@@ -2712,7 +2838,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     const content = `\uFEFF${rows
       .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
       .join('\r\n')}`;
-    await this.downloadCsv({ fileName, content, rowCount: Math.max(0, rows.length - 1) }, destination);
+    await this.downloadCsv(
+      { fileName, content, rowCount: Math.max(0, rows.length - 1) },
+      destination,
+    );
   }
 
   private async downloadRowsPdf(
@@ -2729,7 +2858,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       import('jspdf'),
       import('jspdf-autotable'),
     ]);
-    const pdf = new jsPDF({ orientation: width > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+    const pdf = new jsPDF({
+      orientation: width > 5 ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
     const title = String(rows[0]?.[0] || 'Report export');
     pdf.setProperties({ title, creator: 'POS V2 Owner Dashboard' });
     pdf.setFont('helvetica', 'bold');
@@ -2744,7 +2877,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       startY: 62,
       margin: { left: 28, right: 28, bottom: 28 },
       theme: 'grid',
-      styles: { font: 'helvetica', fontSize: width > 5 ? 6.5 : 7.5, cellPadding: 4, overflow: 'linebreak' },
+      styles: {
+        font: 'helvetica',
+        fontSize: width > 5 ? 6.5 : 7.5,
+        cellPadding: 4,
+        overflow: 'linebreak',
+      },
       alternateRowStyles: { fillColor: [247, 249, 248] },
     });
     const blob = pdf.output('blob');
@@ -2959,7 +3097,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   private reportFilters(): ReportFilters {
     return {
       search: this.search,
-      status: this.activeView === 'sales' || this.activeView === 'customers' ? this.salesStatus : '',
+      status:
+        this.activeView === 'sales' || this.activeView === 'customers' ? this.salesStatus : '',
       payment: this.activeView === 'sales' ? this.salesPayment : '',
       itemCode: this.activeView === 'sales' ? this.salesItemCode : '',
       category: this.activeView === 'inventory' ? this.inventoryCategory : '',

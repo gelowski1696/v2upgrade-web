@@ -6,6 +6,9 @@ import {
   FreshResponse,
   PortalSession,
   PortalStore,
+  PortalInvitationResult,
+  PortalRole,
+  PortalTenantUser,
   ProvisionedPortalStore,
   PortalUser,
   WebAnalyticsConfiguration,
@@ -121,8 +124,23 @@ export class PortalApiService {
   stores(): Promise<PortalStore[]> {
     return this.get<PortalStore[]>('/portal/stores');
   }
-  createStore(input: { code: string; name: string; timezone?: string }): Promise<ProvisionedPortalStore> {
+  createStore(input: {
+    code: string;
+    name: string;
+    timezone?: string;
+  }): Promise<ProvisionedPortalStore> {
     return this.authorized('POST', '/portal/stores', input);
+  }
+  tenantUsers(): Promise<PortalTenantUser[]> {
+    return this.get<PortalTenantUser[]>('/portal/users');
+  }
+  createTenantUserInvitation(input: {
+    username: string;
+    displayName: string;
+    role: PortalRole;
+    storeIds: string[];
+  }): Promise<PortalInvitationResult> {
+    return this.authorized('POST', '/portal/users/invitations', input);
   }
   analyticsConfiguration(): Promise<WebAnalyticsConfiguration> {
     return this.get<WebAnalyticsConfiguration>('/portal/analytics/configuration');
@@ -292,29 +310,17 @@ export class PortalApiService {
       `/portal/stores/${encodeURIComponent(storeId)}/customers/${encodeURIComponent(String(customerId))}/purchase-history?${query.toString()}`,
     );
   }
-  customers<T>(
-    storeId: string,
-    page = 1,
-    filters: ReportFilters = {},
-  ): Promise<FreshResponse<T>> {
+  customers<T>(storeId: string, page = 1, filters: ReportFilters = {}): Promise<FreshResponse<T>> {
     const query = this.reportQuery('', '', filters);
     query.set('page', String(page));
     query.set('pageSize', '25');
-    return this.get(
-      `/portal/stores/${encodeURIComponent(storeId)}/customers?${query.toString()}`,
-    );
+    return this.get(`/portal/stores/${encodeURIComponent(storeId)}/customers?${query.toString()}`);
   }
-  personnel<T>(
-    storeId: string,
-    page = 1,
-    filters: ReportFilters = {},
-  ): Promise<FreshResponse<T>> {
+  personnel<T>(storeId: string, page = 1, filters: ReportFilters = {}): Promise<FreshResponse<T>> {
     const query = this.reportQuery('', '', filters);
     query.set('page', String(page));
     query.set('pageSize', '25');
-    return this.get(
-      `/portal/stores/${encodeURIComponent(storeId)}/personnel?${query.toString()}`,
-    );
+    return this.get(`/portal/stores/${encodeURIComponent(storeId)}/personnel?${query.toString()}`);
   }
   customerLendHistory<T>(
     storeId: string,
