@@ -134,6 +134,17 @@
           <svg lucidePlus aria-hidden="true"></svg>
           <span>Branches</span>
         </button>
+        <button
+          *ngIf="canManageBranches"
+          type="button"
+          class="branch-command"
+          title="Manage web users"
+          aria-label="Manage web users"
+          (click)="openPeopleManager()"
+        >
+          <svg lucideUsers aria-hidden="true"></svg>
+          <span>People</span>
+        </button>
 
         <div
           class="freshness"
@@ -5521,6 +5532,76 @@
         <button type="button" class="branch-secondary-button" (click)="closeBranchManager()">
           Close
         </button>
+      </footer>
+    </section>
+  </div>
+
+  <div
+    class="branch-manager-backdrop"
+    *ngIf="peopleManagerOpen"
+    (click)="closePeopleManager()"
+  >
+    <section
+      class="branch-manager-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="people-manager-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="branch-manager-header">
+        <div>
+          <p>ACCESS MANAGEMENT</p>
+          <h2 id="people-manager-title">Owner Dashboard users</h2>
+          <span>Invite an owner, manager, or viewer and choose their branches.</span>
+        </div>
+        <button type="button" aria-label="Close people manager" (click)="closePeopleManager()">
+          <svg lucideX aria-hidden="true"></svg>
+        </button>
+      </header>
+
+      <form class="branch-manager-form" (ngSubmit)="createTenantInvitation()">
+        <label><span>Email / username</span><input name="portalUsername" [(ngModel)]="peopleForm.username" maxlength="180" autocomplete="off" required /></label>
+        <label><span>Display name</span><input name="portalDisplayName" [(ngModel)]="peopleForm.displayName" maxlength="160" required /></label>
+        <label>
+          <span>Role</span>
+          <select name="portalRole" [(ngModel)]="peopleForm.role">
+            <option value="OWNER">Owner</option><option value="MANAGER">Manager</option><option value="VIEWER">Viewer</option>
+          </select>
+        </label>
+        <button class="branch-primary-button" type="submit" [disabled]="peopleBusy || !peopleForm.username.trim() || !peopleForm.displayName.trim() || !inviteStoreIds.size">
+          {{ peopleBusy ? 'Creating...' : 'Create invitation' }}
+        </button>
+      </form>
+
+      <div class="branch-manager-list">
+        <div class="branch-manager-list-heading"><strong>Branch access</strong><span>{{ inviteStoreIds.size }} selected</span></div>
+        <label *ngFor="let store of stores" class="branch-manager-row">
+          <span>{{ store.name }} · {{ store.code }}</span>
+          <input type="checkbox" [checked]="inviteStoreIds.has(store.id)" (change)="toggleInviteStore(store.id, $any($event.target).checked)" />
+        </label>
+      </div>
+
+      <p class="branch-manager-message error" *ngIf="peopleError" role="alert">{{ peopleError }}</p>
+      <p class="branch-manager-message success" *ngIf="peopleStatus" role="status">{{ peopleStatus }}</p>
+      <div class="branch-manager-list" *ngIf="invitationToken">
+        <div class="branch-manager-row">
+          <div><strong>Activation token</strong><span>{{ invitationToken }}</span></div>
+          <button type="button" class="branch-secondary-button" (click)="copyInvitationToken()">Copy token</button>
+        </div>
+      </div>
+
+      <div class="branch-manager-list">
+        <div class="branch-manager-list-heading"><strong>Current web users</strong><span>{{ tenantUsers.length }} accounts</span></div>
+        <p *ngIf="peopleLoading" role="status">Loading users...</p>
+        <article *ngFor="let user of tenantUsers" class="branch-manager-row">
+          <div><strong>{{ user.displayName }}</strong><span>{{ user.username }} · {{ user.storeAccess.length }} branches</span></div>
+          <span class="branch-status">{{ user.role }} · {{ user.status }}</span>
+        </article>
+      </div>
+
+      <footer class="branch-manager-footer">
+        <span>Activation tokens expire after 48 hours and can be used once.</span>
+        <button type="button" class="branch-secondary-button" (click)="closePeopleManager()">Close</button>
       </footer>
     </section>
   </div>

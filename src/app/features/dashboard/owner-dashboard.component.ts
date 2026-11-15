@@ -31,7 +31,12 @@ import {
 } from '@lucide/angular';
 import { PortalApiService } from '../../core/api/portal-api.service';
 import { WebAnalyticsCollector } from '../../core/analytics/web-analytics.collector';
-import { FreshResponse, PortalStore } from '../../domain/models/portal.models';
+import {
+  FreshResponse,
+  PortalRole,
+  PortalStore,
+  PortalTenantUser,
+} from '../../domain/models/portal.models';
 import {
   BusinessOverviewData,
   CashFlowData,
@@ -192,6 +197,19 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   branchError = '';
   branchStatus = '';
   branchForm = { code: '', name: '', timezone: 'Asia/Manila' };
+  peopleManagerOpen = false;
+  peopleLoading = false;
+  peopleBusy = false;
+  peopleError = '';
+  peopleStatus = '';
+  tenantUsers: PortalTenantUser[] = [];
+  peopleForm: { username: string; displayName: string; role: PortalRole } = {
+    username: '',
+    displayName: '',
+    role: 'MANAGER',
+  };
+  inviteStoreIds = new Set<string>();
+  invitationToken = '';
   loading = false;
   error = '';
   exporting = false;
@@ -791,6 +809,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.dismissTransferDetails(false);
     this.securityOpen = false;
     this.closeBranchManager();
+    this.closePeopleManager();
     this.changeDetector.detectChanges();
   }
   async handleSessionEnded(): Promise<void> {
@@ -861,6 +880,74 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.branchError = this.message(error, 'The branch could not be created.');
     } finally {
       this.branchBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async openPeopleManager(): Promise<void> {
+    if (!this.canManageBranches) return;
+    this.peopleManagerOpen = true;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+    this.inviteStoreIds = new Set(this.stores.map((store) => store.id));
+    await this.loadTenantUsers();
+  }
+  closePeopleManager(): void {
+    if (this.peopleBusy) return;
+    this.peopleManagerOpen = false;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+  }
+  toggleInviteStore(storeId: string, selected: boolean): void {
+    const next = new Set(this.inviteStoreIds);
+    if (selected) next.add(storeId);
+    else next.delete(storeId);
+    this.inviteStoreIds = next;
+  }
+  async createTenantInvitation(): Promise<void> {
+    if (
+      !this.canManageBranches ||
+      this.peopleBusy ||
+      !this.peopleForm.username.trim() ||
+      !this.peopleForm.displayName.trim() ||
+      !this.inviteStoreIds.size
+    ) return;
+    this.peopleBusy = true;
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+    try {
+      const result = await this.api.createTenantUserInvitation({
+        username: this.peopleForm.username.trim().toLowerCase(),
+        displayName: this.peopleForm.displayName.trim(),
+        role: this.peopleForm.role,
+        storeIds: [...this.inviteStoreIds],
+      });
+      this.invitationToken = result.invitation.activationToken;
+      this.peopleStatus = `Invitation created for ${result.invitation.username}.`;
+      this.peopleForm = { username: '', displayName: '', role: 'MANAGER' };
+      await this.loadTenantUsers();
+    } catch (error) {
+      this.peopleError = this.message(error, 'The user invitation could not be created.');
+    } finally {
+      this.peopleBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async copyInvitationToken(): Promise<void> {
+    if (!this.invitationToken) return;
+    await navigator.clipboard.writeText(this.invitationToken);
+    this.peopleStatus = 'Activation token copied.';
+  }
+  private async loadTenantUsers(): Promise<void> {
+    this.peopleLoading = true;
+    try {
+      this.tenantUsers = await this.api.tenantUsers();
+    } catch (error) {
+      this.peopleError = this.message(error, 'Tenant users could not be loaded.');
+    } finally {
+      this.peopleLoading = false;
       this.changeDetector.detectChanges();
     }
   }
