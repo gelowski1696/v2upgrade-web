@@ -32,6 +32,16 @@
   color: #6f665b;
 }
 
+.branch-command{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 13px;border:1px solid #d8c8ae;border-radius:5px;background:#fffdf8;color:#42382c;font-size:12px;font-weight:700}
+.branch-manager-backdrop{position:fixed;z-index:40;inset:0;display:grid;place-items:center;padding:20px;background:rgb(27 22 15 / 58%)}
+.branch-manager-dialog{width:min(100%,680px);max-height:min(760px,calc(100vh - 40px));overflow:auto;border:1px solid #dfd2bd;border-radius:8px;background:#fffdf8;box-shadow:0 20px 60px rgb(25 20 13 / 20%)}
+.branch-manager-header,.branch-manager-list-heading,.branch-manager-row,.branch-manager-footer{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.branch-manager-header{align-items:flex-start;padding:22px 24px;border-bottom:1px solid #e8dece}.branch-manager-header>button{display:grid;width:34px;height:34px;place-items:center}
+.branch-manager-form{display:grid;grid-template-columns:.7fr 1.2fr 1fr auto;gap:10px;padding:18px 24px;border-bottom:1px solid #e8dece;background:#fbf7ee}.branch-manager-form label{display:grid;gap:6px}.branch-manager-form input{width:100%;min-height:38px;padding:0 10px;border:1px solid #d8c8ae;border-radius:4px;background:#fff}
+.branch-primary-button,.branch-secondary-button{min-height:38px;padding:0 14px;border-radius:4px;font-size:12px;font-weight:800}.branch-primary-button{align-self:end;border:1px solid #bd861d;background:#c9952d;color:#241b10}.branch-primary-button:disabled{opacity:.55}.branch-secondary-button{border:1px solid #d8c8ae;background:#fffdf8;color:#4b4033}
+.branch-manager-message{margin:16px 24px 0;font-size:12px}.branch-manager-message.error{color:#a1382b}
+.branch-manager-list{padding:18px 24px 6px}.branch-manager-list-heading{padding-bottom:8px;font-size:12px}.branch-manager-row{padding:13px 0;border-top:1px solid #ebe2d5}.branch-manager-row>div{display:grid;gap:4px;min-width:0}.branch-status{font-size:10px;font-weight:800}
+
 svg {
   width: 18px;
   height: 18px;

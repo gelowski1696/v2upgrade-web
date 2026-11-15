@@ -32,6 +32,15 @@ export interface PortalStore {
   } | null;
 }
 
+export interface ProvisionedPortalStore {
+  id: string;
+  clientId: string;
+  code: string;
+  name: string;
+  timezone: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+}
+
 export interface FreshResponse<T> {
   storeId: string;
   snapshotId: string;

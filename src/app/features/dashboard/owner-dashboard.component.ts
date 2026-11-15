@@ -19,6 +19,7 @@ import {
   LucideHistory,
   LucideLogOut,
   LucideMenu,
+  LucidePlus,
   LucideRefreshCw,
   LucideSearch,
   LucideSettings,
@@ -125,6 +126,7 @@ type ExportTarget = 'current' | 'customer-sales-history' | 'customer-lend-histor
     LucideHistory,
     LucideLogOut,
     LucideMenu,
+    LucidePlus,
     LucideRefreshCw,
     LucideSearch,
     LucideSettings,
@@ -185,6 +187,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   activeView: ReportView = 'overview';
   sidebarOpen = false;
   securityOpen = false;
+  branchManagerOpen = false;
+  branchBusy = false;
+  branchError = '';
+  branchStatus = '';
+  branchForm = { code: '', name: '', timezone: 'Asia/Manila' };
   loading = false;
   error = '';
   exporting = false;
@@ -383,6 +390,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   }
   get selectedStore(): PortalStore | null {
     return this.stores.find((store) => store.id === this.selectedStoreId) ?? null;
+  }
+  get canManageBranches(): boolean {
+    return this.api.user?.role === 'OWNER';
   }
   get storeGroups(): Array<{ groupId: string; groupName: string; stores: PortalStore[] }> {
     const groups = new Map<string, { groupId: string; groupName: string; stores: PortalStore[] }>();
@@ -780,6 +790,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.dismissDataQuality(false);
     this.dismissTransferDetails(false);
     this.securityOpen = false;
+    this.closeBranchManager();
     this.changeDetector.detectChanges();
   }
   async handleSessionEnded(): Promise<void> {
@@ -805,6 +816,51 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.error = this.message(error, 'Stores could not be loaded.');
     } finally {
       this.loading = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  openBranchManager(): void {
+    if (!this.canManageBranches) return;
+    this.branchManagerOpen = true;
+    this.branchError = '';
+    this.branchStatus = '';
+    this.branchForm = { code: '', name: '', timezone: this.selectedStore?.timezone || 'Asia/Manila' };
+  }
+  closeBranchManager(): void {
+    if (this.branchBusy) return;
+    this.branchManagerOpen = false;
+    this.branchError = '';
+    this.branchStatus = '';
+  }
+  async createBranch(): Promise<void> {
+    if (
+      !this.canManageBranches ||
+      this.branchBusy ||
+      !this.branchForm.code.trim() ||
+      !this.branchForm.name.trim()
+    ) {
+      return;
+    }
+    this.branchBusy = true;
+    this.branchError = '';
+    this.branchStatus = '';
+    try {
+      const created = await this.api.createStore({
+        code: this.branchForm.code.trim().toUpperCase(),
+        name: this.branchForm.name.trim(),
+        timezone: this.branchForm.timezone.trim() || 'Asia/Manila',
+      });
+      await this.loadStores();
+      this.selectedStoreId = created.id;
+      localStorage.setItem('posv2.portalStoreId', created.id);
+      await this.changeStore();
+      this.branchForm = { code: '', name: '', timezone: created.timezone };
+      this.branchStatus = `${created.name} was added and is ready for desktop setup.`;
+      this.changeDetector.detectChanges();
+    } catch (error) {
+      this.branchError = this.message(error, 'The branch could not be created.');
+    } finally {
+      this.branchBusy = false;
       this.changeDetector.detectChanges();
     }
   }

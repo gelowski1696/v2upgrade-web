@@ -123,6 +123,18 @@
           </label>
         </div>
 
+        <button
+          *ngIf="canManageBranches"
+          type="button"
+          class="branch-command"
+          title="Manage branches"
+          aria-label="Manage branches"
+          (click)="openBranchManager()"
+        >
+          <svg lucidePlus aria-hidden="true"></svg>
+          <span>Branches</span>
+        </button>
+
         <div
           class="freshness"
           *ngIf="
@@ -5422,5 +5434,95 @@
     (closed)="securityOpen = false"
     (sessionEnded)="handleSessionEnded()"
   />
+
+  <div
+    class="branch-manager-backdrop"
+    *ngIf="branchManagerOpen"
+    (click)="closeBranchManager()"
+  >
+    <section
+      class="branch-manager-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="branch-manager-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="branch-manager-header">
+        <div>
+          <p>BUSINESS SETTINGS</p>
+          <h2 id="branch-manager-title">Branches and stores</h2>
+          <span>Add a branch before enrolling its VMJAM Sales workstation.</span>
+        </div>
+        <button type="button" aria-label="Close branch manager" (click)="closeBranchManager()">
+          <svg lucideX aria-hidden="true"></svg>
+        </button>
+      </header>
+
+      <form class="branch-manager-form" (ngSubmit)="createBranch()">
+        <label>
+          <span>Branch code</span>
+          <input
+            name="branchCode"
+            [(ngModel)]="branchForm.code"
+            maxlength="40"
+            placeholder="NORTH"
+            autocomplete="off"
+            required
+          />
+        </label>
+        <label>
+          <span>Branch name</span>
+          <input
+            name="branchName"
+            [(ngModel)]="branchForm.name"
+            maxlength="180"
+            placeholder="North Branch"
+            required
+          />
+        </label>
+        <label>
+          <span>Timezone</span>
+          <input name="branchTimezone" [(ngModel)]="branchForm.timezone" maxlength="80" />
+        </label>
+        <button
+          class="branch-primary-button"
+          type="submit"
+          [disabled]="branchBusy || !branchForm.code.trim() || !branchForm.name.trim()"
+        >
+          {{ branchBusy ? 'Adding branch...' : 'Add branch' }}
+        </button>
+      </form>
+
+      <p class="branch-manager-message error" *ngIf="branchError" role="alert">
+        {{ branchError }}
+      </p>
+      <p class="branch-manager-message success" *ngIf="branchStatus" role="status">
+        {{ branchStatus }}
+      </p>
+
+      <div class="branch-manager-list">
+        <div class="branch-manager-list-heading">
+          <strong>Authorized branches</strong>
+          <span>{{ stores.length }} available</span>
+        </div>
+        <article *ngFor="let store of stores" class="branch-manager-row">
+          <div>
+            <strong>{{ store.name }}</strong>
+            <span>{{ store.code }} · {{ store.timezone }}</span>
+          </div>
+          <span class="branch-status" [class.ready]="!!store.activeSnapshot">
+            {{ store.activeSnapshot ? 'Synced' : 'Desktop setup needed' }}
+          </span>
+        </article>
+      </div>
+
+      <footer class="branch-manager-footer">
+        <span>Branch creation respects your subscription store limit.</span>
+        <button type="button" class="branch-secondary-button" (click)="closeBranchManager()">
+          Close
+        </button>
+      </footer>
+    </section>
+  </div>
 </ng-template>
 </ng-container>

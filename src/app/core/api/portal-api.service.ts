@@ -6,6 +6,7 @@ import {
   FreshResponse,
   PortalSession,
   PortalStore,
+  ProvisionedPortalStore,
   PortalUser,
   WebAnalyticsConfiguration,
   WebAnalyticsEvent,
@@ -119,6 +120,9 @@ export class PortalApiService {
 
   stores(): Promise<PortalStore[]> {
     return this.get<PortalStore[]>('/portal/stores');
+  }
+  createStore(input: { code: string; name: string; timezone?: string }): Promise<ProvisionedPortalStore> {
+    return this.authorized('POST', '/portal/stores', input);
   }
   analyticsConfiguration(): Promise<WebAnalyticsConfiguration> {
     return this.get<WebAnalyticsConfiguration>('/portal/analytics/configuration');
