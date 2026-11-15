@@ -41,32 +41,6 @@ export interface ProvisionedPortalStore {
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 }
 
-export interface PortalTenantUser {
-  id: string;
-  username: string;
-  displayName: string;
-  role: PortalRole;
-  status: 'INVITED' | 'ACTIVE' | 'DISABLED';
-  lastLoginAt: string | null;
-  storeAccess: Array<{
-    storeId: string;
-    store: { code: string; name: string };
-  }>;
-}
-
-export interface PortalInvitationResult {
-  mode: 'INVITATION_CREATED';
-  invitation: {
-    id: string;
-    username: string;
-    displayName: string;
-    role: PortalRole;
-    storeIds: string[];
-    expiresAt: string;
-    activationToken: string;
-  };
-}
-
 export interface FreshResponse<T> {
   storeId: string;
   snapshotId: string;
