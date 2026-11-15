@@ -33,6 +33,10 @@ import { PortalApiService } from '../../core/api/portal-api.service';
 import { WebAnalyticsCollector } from '../../core/analytics/web-analytics.collector';
 import {
   FreshResponse,
+  MasterDataChangeOperation,
+  MasterDataEntityType,
+  MasterDataReleaseEntry,
+  MasterDataReleaseSummary,
   PortalRole,
   PortalStore,
   PortalTenantUser,
@@ -210,6 +214,20 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   };
   inviteStoreIds = new Set<string>();
   invitationToken = '';
+  masterDataManagerOpen = false;
+  masterDataLoading = false;
+  masterDataBusy = false;
+  masterDataError = '';
+  masterDataStatus = '';
+  masterDataReleases: MasterDataReleaseSummary[] = [];
+  masterDataNotes = '';
+  masterDataEntries: MasterDataReleaseEntry[] = [];
+  masterDataEntryForm: {
+    entityType: MasterDataEntityType;
+    operation: MasterDataChangeOperation;
+    stableKey: string;
+    payload: string;
+  } = { entityType: 'PRODUCT', operation: 'UPSERT', stableKey: '', payload: '{"name":""}' };
   loading = false;
   error = '';
   exporting = false;
@@ -810,6 +828,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.securityOpen = false;
     this.closeBranchManager();
     this.closePeopleManager();
+    this.closeMasterDataManager();
     this.changeDetector.detectChanges();
   }
   async handleSessionEnded(): Promise<void> {
@@ -948,6 +967,115 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       this.peopleError = this.message(error, 'Tenant users could not be loaded.');
     } finally {
       this.peopleLoading = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async openMasterDataManager(): Promise<void> {
+    if (!this.canManageBranches) return;
+    this.masterDataManagerOpen = true;
+    this.masterDataError = '';
+    this.masterDataStatus = '';
+    this.masterDataEntries = [];
+    this.masterDataNotes = '';
+    await this.loadMasterDataReleases();
+  }
+  closeMasterDataManager(): void {
+    if (this.masterDataBusy) return;
+    this.masterDataManagerOpen = false;
+    this.masterDataError = '';
+    this.masterDataStatus = '';
+  }
+  addMasterDataEntry(): void {
+    const stableKey = this.masterDataEntryForm.stableKey.trim().toUpperCase();
+    if (!stableKey) {
+      this.masterDataError = 'Enter a stable key before adding the entry.';
+      return;
+    }
+    try {
+      const payload = JSON.parse(this.masterDataEntryForm.payload) as unknown;
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('Payload must be a JSON object.');
+      }
+      if (this.masterDataEntries.some((entry) => entry.entityType === this.masterDataEntryForm.entityType && entry.stableKey === stableKey)) {
+        throw new Error('This entity type and stable key are already in the draft.');
+      }
+      this.masterDataEntries = [
+        ...this.masterDataEntries,
+        {
+          entityType: this.masterDataEntryForm.entityType,
+          operation: this.masterDataEntryForm.operation,
+          stableKey,
+          payload: payload as Record<string, unknown>,
+        },
+      ];
+      this.masterDataEntryForm = {
+        ...this.masterDataEntryForm,
+        stableKey: '',
+        payload: '{"name":""}',
+      };
+      this.masterDataError = '';
+    } catch (error) {
+      this.masterDataError = error instanceof Error ? error.message : 'Entry payload is invalid JSON.';
+    }
+  }
+  removeMasterDataEntry(index: number): void {
+    this.masterDataEntries = this.masterDataEntries.filter((_, entryIndex) => entryIndex !== index);
+  }
+  async createMasterDataDraft(): Promise<void> {
+    if (!this.canManageBranches || this.masterDataBusy || !this.masterDataEntries.length) {
+      this.masterDataError = 'Add at least one master-data entry first.';
+      return;
+    }
+    this.masterDataBusy = true;
+    this.masterDataError = '';
+    this.masterDataStatus = '';
+    try {
+      await this.api.createMasterDataRelease({
+        entries: this.masterDataEntries,
+        notes: this.masterDataNotes.trim() || undefined,
+      });
+      this.masterDataEntries = [];
+      this.masterDataNotes = '';
+      this.masterDataStatus = 'Draft release created.';
+      await this.loadMasterDataReleases();
+    } catch (error) {
+      this.masterDataError = this.message(error, 'The master-data draft could not be created.');
+    } finally {
+      this.masterDataBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async publishMasterDataDraft(release: MasterDataReleaseSummary): Promise<void> {
+    if (release.status !== 'DRAFT' || this.masterDataBusy || !window.confirm(`Publish master-data release v${release.version}?`)) return;
+    await this.changeMasterDataRelease(release.id, 'publish');
+  }
+  async rollbackMasterData(release: MasterDataReleaseSummary): Promise<void> {
+    if (release.status !== 'PUBLISHED' || this.masterDataBusy || !window.confirm(`Roll back master-data release v${release.version}?`)) return;
+    await this.changeMasterDataRelease(release.id, 'rollback');
+  }
+  private async changeMasterDataRelease(releaseId: string, action: 'publish' | 'rollback'): Promise<void> {
+    this.masterDataBusy = true;
+    this.masterDataError = '';
+    try {
+      if (action === 'publish') await this.api.publishMasterDataRelease(releaseId);
+      else await this.api.rollbackMasterDataRelease(releaseId);
+      this.masterDataStatus = action === 'publish' ? 'Release published.' : 'Release rolled back.';
+      await this.loadMasterDataReleases();
+    } catch (error) {
+      this.masterDataError = this.message(error, 'The master-data release could not be changed.');
+    } finally {
+      this.masterDataBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  private async loadMasterDataReleases(): Promise<void> {
+    this.masterDataLoading = true;
+    try {
+      this.masterDataReleases = await this.api.masterDataReleases();
+    } catch (error) {
+      this.masterDataError = this.message(error, 'Master-data releases could not be loaded.');
+    } finally {
+      this.masterDataLoading = false;
       this.changeDetector.detectChanges();
     }
   }

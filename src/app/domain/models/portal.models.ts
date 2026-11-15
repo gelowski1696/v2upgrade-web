@@ -67,6 +67,41 @@ export interface PortalInvitationResult {
   };
 }
 
+export type MasterDataEntityType =
+  | 'CATEGORY'
+  | 'BRAND'
+  | 'CYLINDER_SIZE'
+  | 'PRODUCT'
+  | 'SUPPLIER'
+  | 'PRICE';
+export type MasterDataChangeOperation = 'UPSERT' | 'DEACTIVATE';
+
+export interface MasterDataReleaseSummary {
+  id: string;
+  clientId: string;
+  version: number;
+  status: 'DRAFT' | 'PUBLISHED' | 'ROLLED_BACK';
+  releaseHash: string | null;
+  notes: string | null;
+  createdById: string;
+  publishedAt: string | null;
+  rolledBackAt: string | null;
+  createdAt: string;
+  _count: { entries: number };
+}
+
+export interface MasterDataReleaseEntry {
+  id?: string;
+  entityType: MasterDataEntityType;
+  operation: MasterDataChangeOperation;
+  stableKey: string;
+  payload: Record<string, unknown>;
+}
+
+export interface MasterDataReleaseDetail extends MasterDataReleaseSummary {
+  entries: MasterDataReleaseEntry[];
+}
+
 export interface FreshResponse<T> {
   storeId: string;
   snapshotId: string;

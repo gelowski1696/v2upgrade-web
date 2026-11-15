@@ -9,6 +9,9 @@ import {
   PortalInvitationResult,
   PortalRole,
   PortalTenantUser,
+  MasterDataReleaseDetail,
+  MasterDataReleaseSummary,
+  MasterDataReleaseEntry,
   ProvisionedPortalStore,
   PortalUser,
   WebAnalyticsConfiguration,
@@ -137,6 +140,18 @@ export class PortalApiService {
     storeIds: string[];
   }): Promise<PortalInvitationResult> {
     return this.authorized('POST', '/portal/users/invitations', input);
+  }
+  masterDataReleases(): Promise<MasterDataReleaseSummary[]> {
+    return this.get<MasterDataReleaseSummary[]>('/portal/master-releases');
+  }
+  createMasterDataRelease(input: { entries: MasterDataReleaseEntry[]; notes?: string }): Promise<MasterDataReleaseDetail> {
+    return this.authorized('POST', '/portal/master-releases', input);
+  }
+  publishMasterDataRelease(releaseId: string): Promise<MasterDataReleaseDetail> {
+    return this.authorized('POST', `/portal/master-releases/${encodeURIComponent(releaseId)}/publish`);
+  }
+  rollbackMasterDataRelease(releaseId: string): Promise<MasterDataReleaseSummary> {
+    return this.authorized('POST', `/portal/master-releases/${encodeURIComponent(releaseId)}/rollback`);
   }
   analyticsConfiguration(): Promise<WebAnalyticsConfiguration> {
     return this.get<WebAnalyticsConfiguration>('/portal/analytics/configuration');

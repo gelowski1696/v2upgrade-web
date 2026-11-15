@@ -145,6 +145,17 @@
           <svg lucideUsers aria-hidden="true"></svg>
           <span>People</span>
         </button>
+        <button
+          *ngIf="canManageBranches"
+          type="button"
+          class="branch-command"
+          title="Manage master data"
+          aria-label="Manage master data"
+          (click)="openMasterDataManager()"
+        >
+          <svg lucideBoxes aria-hidden="true"></svg>
+          <span>Master data</span>
+        </button>
 
         <div
           class="freshness"
@@ -5603,6 +5614,64 @@
         <span>Activation tokens expire after 48 hours and can be used once.</span>
         <button type="button" class="branch-secondary-button" (click)="closePeopleManager()">Close</button>
       </footer>
+    </section>
+  </div>
+
+  <div class="branch-manager-backdrop" *ngIf="masterDataManagerOpen" (click)="closeMasterDataManager()">
+    <section class="branch-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="master-data-title" (click)="$event.stopPropagation()">
+      <header class="branch-manager-header">
+        <div>
+          <p>MASTER DATA CONTROL</p>
+          <h2 id="master-data-title">Cloud master releases</h2>
+          <span>Create a draft, review it, then publish it for enrolled desktops.</span>
+        </div>
+        <button type="button" aria-label="Close master data manager" (click)="closeMasterDataManager()"><svg lucideX aria-hidden="true"></svg></button>
+      </header>
+
+      <form class="branch-manager-form" (ngSubmit)="addMasterDataEntry()">
+        <label>
+          <span>Entity</span>
+          <select name="masterEntity" [(ngModel)]="masterDataEntryForm.entityType">
+            <option value="CATEGORY">Category</option><option value="BRAND">Brand</option><option value="CYLINDER_SIZE">Cylinder size</option><option value="PRODUCT">Product</option><option value="SUPPLIER">Supplier</option><option value="PRICE">Price</option>
+          </select>
+        </label>
+        <label>
+          <span>Operation</span>
+          <select name="masterOperation" [(ngModel)]="masterDataEntryForm.operation"><option value="UPSERT">Create / update</option><option value="DEACTIVATE">Deactivate</option></select>
+        </label>
+        <label><span>Stable key</span><input name="masterStableKey" [(ngModel)]="masterDataEntryForm.stableKey" maxlength="180" placeholder="PRODUCT-11KG" required /></label>
+        <button class="branch-primary-button" type="submit" [disabled]="masterDataBusy">Add entry</button>
+        <label><span>Payload JSON</span><textarea name="masterPayload" [(ngModel)]="masterDataEntryForm.payload" rows="2" spellcheck="false"></textarea></label>
+      </form>
+
+      <div class="branch-manager-list">
+        <div class="branch-manager-list-heading"><strong>Draft entries</strong><span>{{ masterDataEntries.length }} entries</span></div>
+        <article *ngFor="let entry of masterDataEntries; let entryIndex = index" class="branch-manager-row">
+          <div><strong>{{ entry.entityType }} · {{ entry.stableKey }}</strong><span>{{ entry.operation }} · {{ entry.payload | json }}</span></div>
+          <button type="button" class="branch-secondary-button" (click)="removeMasterDataEntry(entryIndex)">Remove</button>
+        </article>
+        <p *ngIf="!masterDataEntries.length">No draft entries yet.</p>
+      </div>
+
+      <label class="branch-manager-list"><span>Release notes</span><textarea name="masterNotes" [(ngModel)]="masterDataNotes" rows="2" maxlength="1000" placeholder="Initial product catalog"></textarea></label>
+      <button class="branch-primary-button" type="button" [disabled]="masterDataBusy || !masterDataEntries.length" (click)="createMasterDataDraft()">Create draft release</button>
+
+      <p class="branch-manager-message error" *ngIf="masterDataError" role="alert">{{ masterDataError }}</p>
+      <p class="branch-manager-message success" *ngIf="masterDataStatus" role="status">{{ masterDataStatus }}</p>
+
+      <div class="branch-manager-list">
+        <div class="branch-manager-list-heading"><strong>Release history</strong><span>{{ masterDataReleases.length }} releases</span></div>
+        <p *ngIf="masterDataLoading" role="status">Loading releases...</p>
+        <article *ngFor="let release of masterDataReleases" class="branch-manager-row">
+          <div><strong>Release v{{ release.version }} · {{ release.status }}</strong><span>{{ release._count.entries }} entries · {{ release.notes || 'No notes' }}</span></div>
+          <span>
+            <button *ngIf="release.status === 'DRAFT'" type="button" class="branch-secondary-button" [disabled]="masterDataBusy" (click)="publishMasterDataDraft(release)">Publish</button>
+            <button *ngIf="release.status === 'PUBLISHED'" type="button" class="branch-secondary-button" [disabled]="masterDataBusy" (click)="rollbackMasterData(release)">Rollback</button>
+          </span>
+        </article>
+      </div>
+
+      <footer class="branch-manager-footer"><span>Publishing does not change local POS data until an enrolled desktop downloads and applies the release.</span><button type="button" class="branch-secondary-button" (click)="closeMasterDataManager()">Close</button></footer>
     </section>
   </div>
 </ng-template>
