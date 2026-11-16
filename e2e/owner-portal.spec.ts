@@ -772,8 +772,7 @@ test('exports every matching report row with the selected store and dates', asyn
     Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
   });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export report' }).click();
-  await page.getByRole('dialog', { name: 'Export report' }).getByRole('button', { name: /^CSV/ }).click();
+  await chooseCsvExport(page);
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('main-lpg-store-sales-2026-09-01-to-2026-09-30.csv');
@@ -1274,7 +1273,12 @@ test('forecasts inventory demand, filters reorder risk, and exports the plan', a
   expect(filteredUrl.searchParams.get('risk')).toBe('REORDER_NOW');
   expect(filteredUrl.searchParams.get('search')).toBe('LPG-11');
 
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
+  const downloadPromise = page.waitForEvent('download');
+  await chooseCsvExport(page);
+  await downloadPromise;
   await expect(page.getByText('Exported 1 record.')).toBeVisible();
   const parsedExportUrl = new URL(exportUrl);
   expect(parsedExportUrl.searchParams.get('forecastDays')).toBe('30');
@@ -1710,8 +1714,7 @@ test('opens supplier, product, payment, and authorized-store monitoring views', 
   await page.evaluate(() => {
     Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
   });
-  await page.getByRole('button', { name: 'Export report' }).click();
-  await page.getByRole('dialog', { name: 'Export report' }).getByRole('button', { name: /^CSV/ }).click();
+  await chooseCsvExport(page);
   await expect.poll(() => productExportUrl).not.toBe('');
   expect(new URL(productExportUrl).searchParams.get('itemCode')).toBe('LPG-11');
 
@@ -1848,7 +1851,7 @@ test('ranks product profitability, compares periods, and exports matching rows',
         json: fresh({
           fileName: 'main-lpg-store-profitability-2026-09-01-to-2026-09-30.csv',
           rowCount: 1,
-          csv: 'Rank,Item code,Item\n1,LPG-11,11 kg LPG',
+          content: 'Rank,Item code,Item\n1,LPG-11,11 kg LPG',
         }),
       };
     }
@@ -1885,7 +1888,12 @@ test('ranks product profitability, compares periods, and exports matching rows',
     })
     .toEqual({ category: 'LPG', rankBy: 'MARGIN', search: '11 kg' });
 
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
+  const downloadPromise = page.waitForEvent('download');
+  await chooseCsvExport(page);
+  await downloadPromise;
   await expect.poll(() => exportUrl).not.toBe('');
   const exported = new URL(exportUrl);
   expect(exported.searchParams.get('category')).toBe('LPG');
@@ -2029,7 +2037,12 @@ test('ranks customer purchases and opens read-only purchase history', async ({ p
     })
     .toEqual({ rankBy: 'VISITS', search: '0917' });
 
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined });
+  });
+  const downloadPromise = page.waitForEvent('download');
+  await chooseCsvExport(page);
+  await downloadPromise;
   await expect.poll(() => exportUrl).not.toBe('');
   const exported = new URL(exportUrl);
   expect(exported.searchParams.get('customerSort')).toBe('VISITS');
@@ -2512,10 +2525,7 @@ test('shows enabled Feature Mod reports without Feature Mods settings', async ({
 
   await page.goto('/');
   const selectReport = async (name: string) => {
-    await page
-      .getByRole('navigation', { name: 'Business reports' })
-      .getByText(name, { exact: true })
-      .click();
+    await navigateToReport(page, name);
   };
 
   const dateInputs = page.locator('.date-filter input[type="date"]');
@@ -2835,6 +2845,82 @@ test('changes password and returns to sign in because all sessions are revoked',
   expect(await page.evaluate(() => localStorage.getItem('posv2.portalAccessToken'))).toBeNull();
 });
 
+test('creates and publishes an owner-scoped master-data release', async ({ page }) => {
+  await seedSession(page);
+  let releaseStatus: 'DRAFT' | 'PUBLISHED' = 'DRAFT';
+  let releaseEntries: Array<Record<string, unknown>> = [];
+  await mockReports(page, async (request) => {
+    const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/master-releases')) {
+      return {
+        json: releaseEntries.length
+          ? [
+              {
+                id: 'release-1',
+                clientId: user.clientId,
+                version: 1,
+                status: releaseStatus,
+                releaseHash: releaseStatus === 'PUBLISHED' ? 'sha256:test' : null,
+                notes: 'Pilot catalog',
+                createdById: user.id,
+                publishedAt: releaseStatus === 'PUBLISHED' ? '2026-11-15T08:00:00.000Z' : null,
+                rolledBackAt: null,
+                createdAt: '2026-11-15T07:00:00.000Z',
+                _count: { entries: releaseEntries.length },
+              },
+            ]
+          : [],
+      };
+    }
+    if (request.method() === 'POST' && url.pathname.endsWith('/portal/master-releases')) {
+      const body = request.postDataJSON() as { entries: Array<Record<string, unknown>> };
+      releaseEntries = body.entries;
+      return {
+        json: {
+          id: 'release-1',
+          clientId: user.clientId,
+          version: 1,
+          status: 'DRAFT',
+          releaseHash: null,
+          notes: 'Pilot catalog',
+          createdById: user.id,
+          publishedAt: null,
+          rolledBackAt: null,
+          createdAt: '2026-11-15T07:00:00.000Z',
+          _count: { entries: releaseEntries.length },
+          entries: releaseEntries,
+        },
+      };
+    }
+    if (
+      request.method() === 'POST' &&
+      url.pathname.endsWith('/portal/master-releases/release-1/publish')
+    ) {
+      releaseStatus = 'PUBLISHED';
+      return { json: { id: 'release-1', status: releaseStatus } };
+    }
+    return undefined;
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Master data' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Cloud master releases' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Stable key').fill('PRODUCT-11KG');
+  await dialog.getByLabel('Payload JSON').fill('{"name":"11 kg LPG","active":true}');
+  await dialog.getByRole('button', { name: 'Add entry' }).click();
+  await expect(dialog.getByText('PRODUCT-11KG')).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Release notes' }).fill('Pilot catalog');
+  await dialog.getByRole('button', { name: 'Create draft release' }).click();
+  await expect(dialog.getByRole('status').getByText('Draft release created.')).toBeVisible();
+  await expect(dialog.getByText('Release v1 · DRAFT')).toBeVisible();
+
+  page.once('dialog', (confirmation) => confirmation.accept());
+  await dialog.getByRole('button', { name: 'Publish' }).click();
+  await expect(dialog.getByRole('status').getByText('Release published.')).toBeVisible();
+  await expect(dialog.getByText('Release v1 · PUBLISHED')).toBeVisible();
+});
+
 async function navigateToReport(page: Page, name: string): Promise<void> {
   if ((page.viewportSize()?.width ?? 1_000) <= 980) {
     const openMenu = page.getByRole('button', { name: 'Open menu' });
@@ -2845,8 +2931,17 @@ async function navigateToReport(page: Page, name: string): Promise<void> {
 
   await page
     .getByRole('navigation', { name: 'Business reports' })
-    .getByRole('button', { name, exact: true })
+    .getByRole('button', {
+      name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s+ADD-ON.*)?$`),
+    })
     .click();
+}
+
+async function chooseCsvExport(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Export report' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export report' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /^CSV/ }).click();
 }
 
 async function mockReports(

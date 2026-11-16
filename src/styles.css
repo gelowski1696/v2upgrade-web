@@ -321,6 +321,11 @@ body.data-export-dialog-open { overflow: hidden; }
   background: color-mix(in srgb, var(--surface, #fff) 96%, #f5f7f6);
 }
 
+.table-scroll {
+  max-width: 100%;
+  contain: layout paint;
+}
+
 .data-export-dialog-cancel {
   min-height: 1.9rem;
   padding: 0.3rem 0.7rem;
@@ -340,10 +345,39 @@ body.data-export-dialog-open { overflow: hidden; }
     justify-content: flex-end;
   }
 
+  .data-export-dialog-backdrop {
+    place-items: end center;
+    padding: 0.75rem;
+  }
+
+  .data-export-dialog {
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+  }
+
   .data-export-dialog-options { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
+  .workspace-bar {
+    gap: 8px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .workspace-bar > .branch-command {
+    width: 36px;
+    min-height: 36px;
+    flex: 0 0 36px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .workspace-bar > .branch-command span,
+  .store-selector > svg {
+    display: none;
+  }
+
   .table-heading > .data-export-toolbar--inline {
     align-self: flex-end;
     padding-left: 0;
