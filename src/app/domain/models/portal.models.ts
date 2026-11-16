@@ -83,7 +83,8 @@ export interface MasterDataReleaseSummary {
   status: 'DRAFT' | 'PUBLISHED' | 'ROLLED_BACK';
   releaseHash: string | null;
   notes: string | null;
-  createdById: string;
+  createdById: string | null;
+  createdByPortalUserId?: string | null;
   publishedAt: string | null;
   rolledBackAt: string | null;
   createdAt: string;
