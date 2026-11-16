@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { OwnerDashboardComponent } from './features/dashboard/owner-dashboard.component';
 
 export const routes: Routes = [
   {
@@ -9,6 +8,12 @@ export const routes: Routes = [
         (module) => module.PrivacyPolicyComponent,
       ),
   },
-  { path: '', component: OwnerDashboardComponent },
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/dashboard/owner-dashboard.component').then(
+        (module) => module.OwnerDashboardComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

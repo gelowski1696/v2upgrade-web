@@ -5,6 +5,8 @@
 @import './app/features/dashboard/customer-insights.css';
 @import './app/features/dashboard/dashboard-preferences.css';
 @import './app/features/dashboard/activity-log.css';
+@import './app/features/dashboard/owner-auth.css';
+@import './app/features/dashboard/owner-branch-manager.css';
 
 :root {
   --ink: #201c16;

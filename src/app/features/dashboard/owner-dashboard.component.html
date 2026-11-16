@@ -5451,11 +5451,13 @@
     </section>
   </div>
 
-  <app-account-security
-    [open]="securityOpen"
-    (closed)="securityOpen = false"
-    (sessionEnded)="handleSessionEnded()"
-  />
+  @defer (when securityOpen) {
+    <app-account-security
+      [open]="securityOpen"
+      (closed)="securityOpen = false"
+      (sessionEnded)="handleSessionEnded()"
+    />
+  }
 
   <div
     class="branch-manager-backdrop"
