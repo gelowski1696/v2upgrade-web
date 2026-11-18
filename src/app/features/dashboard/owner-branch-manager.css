@@ -810,7 +810,185 @@ app-owner-dashboard .branch-data-row code {
 
 app-owner-dashboard .branch-data-table--branches .branch-data-head,
 app-owner-dashboard .branch-data-table--branches .branch-data-row {
-  grid-template-columns: minmax(220px, 1.4fr) 140px minmax(180px, 1fr) 150px;
+  grid-template-columns: minmax(200px, 1.4fr) 120px minmax(160px, 1fr) 130px 130px;
+}
+
+app-owner-dashboard .device-setup-dialog {
+  width: min(720px, 100%);
+}
+
+app-owner-dashboard .device-setup-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #fbf7ef;
+  padding: 12px 22px;
+}
+
+app-owner-dashboard .device-setup-steps span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+app-owner-dashboard .device-setup-steps b {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-raised);
+  font-size: 9px;
+}
+
+app-owner-dashboard .device-setup-steps .active {
+  color: var(--ink-strong);
+}
+
+app-owner-dashboard .device-setup-steps .active b {
+  border-color: #b87c0e;
+  background: var(--accent);
+}
+
+app-owner-dashboard .device-setup-body {
+  display: grid;
+  gap: 14px;
+  padding: 18px 22px 22px;
+}
+
+app-owner-dashboard .device-setup-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+app-owner-dashboard .device-setup-create label {
+  display: grid;
+  gap: 6px;
+  color: #5d5245;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+app-owner-dashboard .device-setup-create input {
+  width: 100%;
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #d5c6ae;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  padding: 0 11px;
+  color: var(--ink);
+  outline: 0;
+}
+
+app-owner-dashboard .device-setup-create input:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgb(215 155 36 / 12%);
+}
+
+app-owner-dashboard .device-enrollment-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px 12px;
+  border: 1px solid #bed7c4;
+  border-radius: 7px;
+  background: #edf7ef;
+  padding: 14px;
+}
+
+app-owner-dashboard .device-enrollment-result > span,
+app-owner-dashboard .device-enrollment-result > code,
+app-owner-dashboard .device-enrollment-result > p {
+  grid-column: 1;
+}
+
+app-owner-dashboard .device-enrollment-result span {
+  color: #4b6f55;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-owner-dashboard .device-enrollment-result code {
+  overflow-wrap: anywhere;
+  color: #274f33;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+app-owner-dashboard .device-enrollment-result p {
+  margin: 0;
+  color: #4b6f55;
+  font-size: 10px;
+}
+
+app-owner-dashboard .device-enrollment-result button {
+  grid-column: 2;
+  grid-row: 1 / 4;
+}
+
+app-owner-dashboard .device-setup-list {
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--surface-raised);
+}
+
+app-owner-dashboard .device-setup-list > header,
+app-owner-dashboard .device-setup-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 13px;
+}
+
+app-owner-dashboard .device-setup-list > header {
+  background: #fbf7ef;
+}
+
+app-owner-dashboard .device-setup-list header div,
+app-owner-dashboard .device-setup-list article > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+app-owner-dashboard .device-setup-list article {
+  border-top: 1px solid var(--line-soft);
+}
+
+app-owner-dashboard .device-setup-list strong {
+  color: var(--ink-strong);
+  font-size: 11px;
+}
+
+app-owner-dashboard .device-setup-list span,
+app-owner-dashboard .device-setup-list small {
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+app-owner-dashboard .device-setup-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+app-owner-dashboard .device-setup-row-actions button {
+  border: 0;
+  background: transparent;
+  color: #a74637;
+  font-size: 9px;
+  font-weight: 800;
 }
 
 app-owner-dashboard .branch-data-table--people .branch-data-head,
@@ -1347,6 +1525,20 @@ app-owner-dashboard .money-input input {
   app-owner-dashboard .branch-access-fieldset {
     grid-template-columns: 1fr;
   }
+
+  app-owner-dashboard .device-setup-create {
+    grid-template-columns: 1fr;
+  }
+
+  app-owner-dashboard .device-enrollment-result {
+    grid-template-columns: 1fr;
+  }
+
+  app-owner-dashboard .device-enrollment-result button {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
 }
 
 @media (max-width: 440px) {
@@ -1396,6 +1588,15 @@ app-owner-dashboard .money-input input {
 
   app-owner-dashboard .invitation-result {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  app-owner-dashboard .device-setup-steps {
+    grid-template-columns: 1fr;
+  }
+
+  app-owner-dashboard .device-setup-list article {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

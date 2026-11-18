@@ -33,6 +33,8 @@ import { PortalApiService } from '../../core/api/portal-api.service';
 import { WebAnalyticsCollector } from '../../core/analytics/web-analytics.collector';
 import {
   FreshResponse,
+  DeviceEnrollmentCreated,
+  DeviceEnrollmentOverview,
   MasterDataChangeOperation,
   MasterDataEntityType,
   MasterDataReleaseEntry,
@@ -229,6 +231,15 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   branchSearch = '';
   filteredBranches: PortalStore[] = [];
   branchForm = { code: '', name: '', timezone: 'Asia/Manila' };
+  deviceSetupOpen = false;
+  deviceSetupStore: PortalStore | null = null;
+  deviceSetupLoading = false;
+  deviceSetupBusy = false;
+  deviceSetupError = '';
+  deviceSetupStatus = '';
+  deviceSetupLabel = '';
+  deviceEnrollment: DeviceEnrollmentCreated | null = null;
+  deviceEnrollmentOverview: DeviceEnrollmentOverview | null = null;
   peopleManagerOpen = false;
   peopleEditorOpen = false;
   peopleSearch = '';
@@ -917,11 +928,91 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.updateFilteredBranches();
   }
   closeBranchManager(): void {
-    if (this.branchBusy) return;
+    if (this.branchBusy || this.deviceSetupBusy) return;
+    this.closeDeviceSetup();
     this.branchManagerOpen = false;
     this.branchEditorOpen = false;
     this.branchError = '';
     this.branchStatus = '';
+  }
+  async openDeviceSetup(store: PortalStore): Promise<void> {
+    this.deviceSetupOpen = true;
+    this.deviceSetupStore = store;
+    this.deviceSetupLabel = `${store.name} POS`;
+    this.deviceSetupError = '';
+    this.deviceSetupStatus = '';
+    this.deviceEnrollment = null;
+    this.deviceEnrollmentOverview = null;
+    await this.loadDeviceEnrollments();
+  }
+  closeDeviceSetup(): void {
+    if (this.deviceSetupBusy) return;
+    this.deviceSetupOpen = false;
+    this.deviceSetupStore = null;
+    this.deviceEnrollment = null;
+    this.deviceEnrollmentOverview = null;
+    this.deviceSetupError = '';
+    this.deviceSetupStatus = '';
+  }
+  async createDeviceEnrollment(): Promise<void> {
+    if (!this.deviceSetupStore || this.deviceSetupBusy) return;
+    this.deviceSetupBusy = true;
+    this.deviceSetupError = '';
+    this.deviceSetupStatus = '';
+    try {
+      this.deviceEnrollment = await this.api.createDeviceEnrollment(
+        this.deviceSetupStore.id,
+        {
+          label: this.deviceSetupLabel.trim() || undefined,
+          expiresInMinutes: 30,
+        },
+      );
+      this.deviceSetupStatus =
+        'Enrollment code created. Enter it in VMJAM Sales within 30 minutes.';
+      await this.loadDeviceEnrollments(false);
+    } catch (error) {
+      this.deviceSetupError = this.message(error, 'The enrollment code could not be created.');
+    } finally {
+      this.deviceSetupBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  async copyDeviceEnrollmentCode(): Promise<void> {
+    if (!this.deviceEnrollment) return;
+    try {
+      await navigator.clipboard.writeText(this.deviceEnrollment.enrollmentCode);
+      this.deviceSetupStatus = 'Enrollment code copied.';
+    } catch {
+      this.deviceSetupError = 'Copy failed. Select and copy the code manually.';
+    }
+  }
+  async revokeDeviceEnrollment(enrollmentId: string): Promise<void> {
+    if (!this.deviceSetupStore || this.deviceSetupBusy) return;
+    this.deviceSetupBusy = true;
+    this.deviceSetupError = '';
+    try {
+      await this.api.revokeDeviceEnrollment(this.deviceSetupStore.id, enrollmentId);
+      if (this.deviceEnrollment?.id === enrollmentId) this.deviceEnrollment = null;
+      this.deviceSetupStatus = 'Enrollment code revoked.';
+      await this.loadDeviceEnrollments(false);
+    } catch (error) {
+      this.deviceSetupError = this.message(error, 'The enrollment code could not be revoked.');
+    } finally {
+      this.deviceSetupBusy = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+  private async loadDeviceEnrollments(showLoading = true): Promise<void> {
+    if (!this.deviceSetupStore) return;
+    if (showLoading) this.deviceSetupLoading = true;
+    try {
+      this.deviceEnrollmentOverview = await this.api.deviceEnrollments(this.deviceSetupStore.id);
+    } catch (error) {
+      this.deviceSetupError = this.message(error, 'Desktop setup status could not be loaded.');
+    } finally {
+      this.deviceSetupLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
   openBranchEditor(): void {
     this.branchForm = {
@@ -2802,7 +2893,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   }
   @HostListener('document:keydown.escape')
   closeSaleDetailsOnEscape(): void {
-    if (this.masterDataManagerOpen) {
+    if (this.deviceSetupOpen) {
+      this.closeDeviceSetup();
+    } else if (this.masterDataManagerOpen) {
       this.closeMasterDataManager();
     } else if (this.peopleManagerOpen) {
       this.closePeopleManager();

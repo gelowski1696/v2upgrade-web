@@ -41,6 +41,39 @@ export interface ProvisionedPortalStore {
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 }
 
+export interface DeviceEnrollmentCreated {
+  id: string;
+  enrollmentCode: string;
+  label: string | null;
+  expiresAt: string;
+  createdAt: string;
+  store: { id: string; code: string; name: string };
+}
+
+export interface DeviceEnrollmentOverview {
+  store: { id: string; code: string; name: string };
+  enrollments: Array<{
+    id: string;
+    label: string | null;
+    expiresAt: string;
+    consumedAt: string | null;
+    revokedAt: string | null;
+    createdAt: string;
+    consumedByDeviceId: string | null;
+    status: 'ACTIVE' | 'CONSUMED' | 'REVOKED' | 'EXPIRED';
+  }>;
+  devices: Array<{
+    id: string;
+    installationId: string;
+    label: string | null;
+    platform: string;
+    appVersion: string | null;
+    status: 'ACTIVE' | 'REVOKED';
+    lastSeenAt: string | null;
+    createdAt: string;
+  }>;
+}
+
 export interface PortalTenantUser {
   id: string;
   username: string;

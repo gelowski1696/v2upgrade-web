@@ -13,6 +13,8 @@ import {
   MasterDataReleaseSummary,
   MasterDataReleaseEntry,
   ProvisionedPortalStore,
+  DeviceEnrollmentCreated,
+  DeviceEnrollmentOverview,
   PortalUser,
   WebAnalyticsConfiguration,
   WebAnalyticsEvent,
@@ -133,6 +135,27 @@ export class PortalApiService {
     timezone?: string;
   }): Promise<ProvisionedPortalStore> {
     return this.authorized('POST', '/portal/stores', input);
+  }
+  deviceEnrollments(storeId: string): Promise<DeviceEnrollmentOverview> {
+    return this.get(
+      `/portal/stores/${encodeURIComponent(storeId)}/device-enrollments`,
+    );
+  }
+  createDeviceEnrollment(
+    storeId: string,
+    input: { label?: string; expiresInMinutes?: number },
+  ): Promise<DeviceEnrollmentCreated> {
+    return this.authorized(
+      'POST',
+      `/portal/stores/${encodeURIComponent(storeId)}/device-enrollments`,
+      input,
+    );
+  }
+  revokeDeviceEnrollment(storeId: string, enrollmentId: string): Promise<void> {
+    return this.authorized(
+      'POST',
+      `/portal/stores/${encodeURIComponent(storeId)}/device-enrollments/${encodeURIComponent(enrollmentId)}/revoke`,
+    );
   }
   tenantUsers(): Promise<PortalTenantUser[]> {
     return this.get<PortalTenantUser[]>('/portal/users');

@@ -2951,6 +2951,7 @@ test('guides owners through branch and people management', async ({ page }) => {
   const branchList: Array<
     Omit<typeof store, 'activeSnapshot'> & { activeSnapshot: typeof store.activeSnapshot | null }
   > = [store];
+  const enrollmentCodes: Array<Record<string, unknown>> = [];
   const portalUsers: Array<{
     id: string;
     username: string;
@@ -2972,6 +2973,42 @@ test('guides owners through branch and people management', async ({ page }) => {
   ];
   await mockReports(page, async (request) => {
     const url = new URL(request.url());
+    if (
+      request.method() === 'GET' &&
+      url.pathname.endsWith(`/portal/stores/${store.id}/device-enrollments`)
+    ) {
+      return {
+        json: {
+          store: { id: store.id, code: store.code, name: store.name },
+          enrollments: enrollmentCodes,
+          devices: [],
+        },
+      };
+    }
+    if (
+      request.method() === 'POST' &&
+      url.pathname.endsWith(`/portal/stores/${store.id}/device-enrollments`)
+    ) {
+      const body = request.postDataJSON() as { label?: string };
+      const enrollment = {
+        id: 'enrollment-main',
+        label: body.label ?? null,
+        expiresAt: '2026-11-18T10:30:00.000Z',
+        consumedAt: null,
+        revokedAt: null,
+        createdAt: '2026-11-18T10:00:00.000Z',
+        consumedByDeviceId: null,
+        status: 'ACTIVE',
+      };
+      enrollmentCodes.unshift(enrollment);
+      return {
+        json: {
+          ...enrollment,
+          enrollmentCode: 'VMJAM-ABCD-EFGH-IJKL-MNOP-QRST',
+          store: { id: store.id, code: store.code, name: store.name },
+        },
+      };
+    }
     if (request.method() === 'GET' && url.pathname.endsWith('/portal/stores')) {
       return { json: branchList };
     }
@@ -3038,6 +3075,15 @@ test('guides owners through branch and people management', async ({ page }) => {
   await page.getByRole('button', { name: 'Branches' }).click();
   const branchDialog = page.getByRole('dialog', { name: 'Branches and stores' });
   await expect(branchDialog.getByRole('table', { name: 'Branches and stores' })).toBeVisible();
+  const mainBranchRow = branchDialog.getByRole('row').filter({ hasText: store.name });
+  await mainBranchRow.getByRole('button', { name: 'Set up desktop' }).click();
+  const deviceSetup = page.getByRole('dialog', { name: `Connect ${store.name}` });
+  await expect(deviceSetup.getByText('No desktop connected')).toBeVisible();
+  await deviceSetup.getByLabel('Device name').fill('Main counter POS');
+  await deviceSetup.getByRole('button', { name: 'Create 30-minute code' }).click();
+  await expect(deviceSetup.getByText('VMJAM-ABCD-EFGH-IJKL-MNOP-QRST')).toBeVisible();
+  await expect(deviceSetup.getByText('Enrollment code created.')).toBeVisible();
+  await deviceSetup.getByRole('button', { name: 'Done' }).click();
   await branchDialog.getByRole('button', { name: 'Add branch' }).click();
   const branchEditor = page.getByRole('dialog', { name: 'Add branch' });
   await branchEditor.getByLabel('Branch name').fill('North Branch');

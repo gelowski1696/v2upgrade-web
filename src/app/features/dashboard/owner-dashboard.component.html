@@ -5884,7 +5884,8 @@
           <div class="branch-data-head" role="row">
             <span role="columnheader">Name</span><span role="columnheader">Branch code</span
             ><span role="columnheader">Timezone</span
-            ><span role="columnheader">Desktop status</span>
+            ><span role="columnheader">Desktop status</span
+            ><span role="columnheader">Actions</span>
           </div>
           <div *ngFor="let store of filteredBranches" class="branch-data-row" role="row">
             <strong role="cell" data-label="Name">{{ store.name }}</strong>
@@ -5897,6 +5898,9 @@
                 store.activeSnapshot ? 'Synced' : 'Setup needed'
               }}</i></span
             >
+            <span role="cell" data-label="Actions" class="branch-row-actions">
+              <button type="button" (click)="openDeviceSetup(store)">Set up desktop</button>
+            </span>
           </div>
           <p class="branch-manager-empty" *ngIf="!filteredBranches.length">
             <strong>No branches found</strong
@@ -5912,6 +5916,142 @@
           <span>Branch creation follows the store limit in your subscription.</span>
           <button type="button" class="branch-secondary-button" (click)="closeBranchManager()">
             Close
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div class="branch-editor-backdrop" *ngIf="deviceSetupOpen" (click)="closeDeviceSetup()">
+      <section
+        class="branch-editor-dialog device-setup-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="device-setup-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header>
+          <div>
+            <p class="branch-manager-eyebrow">DESKTOP SETUP</p>
+            <h2 id="device-setup-title">Connect {{ deviceSetupStore?.name }}</h2>
+            <span>Create a one-time code, then enter it in VMJAM Sales on the branch PC.</span>
+          </div>
+          <button
+            type="button"
+            class="branch-icon-button"
+            aria-label="Close desktop setup"
+            (click)="closeDeviceSetup()"
+          >
+            <svg lucideX aria-hidden="true"></svg>
+          </button>
+        </header>
+
+        <div class="device-setup-steps" aria-label="Desktop setup steps">
+          <span class="active"><b>1</b>Create code</span>
+          <span><b>2</b>Enter in VMJAM Sales</span>
+          <span><b>3</b>Validate catalog</span>
+        </div>
+
+        <p class="branch-manager-message error" *ngIf="deviceSetupError" role="alert">
+          {{ deviceSetupError }}
+        </p>
+        <p class="branch-manager-message success" *ngIf="deviceSetupStatus" role="status">
+          {{ deviceSetupStatus }}
+        </p>
+
+        <div class="device-setup-body">
+          <p class="branch-manager-loading" *ngIf="deviceSetupLoading" role="status">
+            Checking desktop setup...
+          </p>
+          <section class="device-setup-create" *ngIf="!deviceSetupLoading">
+            <label>
+              <span>Device name</span>
+              <input
+                name="deviceSetupLabel"
+                [(ngModel)]="deviceSetupLabel"
+                maxlength="120"
+                placeholder="Example: Front counter POS"
+              />
+            </label>
+            <button
+              type="button"
+              class="branch-primary-button"
+              [disabled]="deviceSetupBusy"
+              (click)="createDeviceEnrollment()"
+            >
+              {{ deviceSetupBusy ? 'Creating...' : 'Create 30-minute code' }}
+            </button>
+          </section>
+
+          <section class="device-enrollment-result" *ngIf="deviceEnrollment">
+            <span>One-time enrollment code</span>
+            <code>{{ deviceEnrollment.enrollmentCode }}</code>
+            <p>
+              This code is shown once and expires at
+              {{ deviceEnrollment.expiresAt | date: 'shortTime' }}.
+            </p>
+            <button type="button" class="branch-secondary-button" (click)="copyDeviceEnrollmentCode()">
+              Copy code
+            </button>
+          </section>
+
+          <section class="device-setup-list" *ngIf="deviceEnrollmentOverview as overview">
+            <header>
+              <div>
+                <strong>Connected desktops</strong>
+                <span>{{ overview.devices.length }} enrolled</span>
+              </div>
+            </header>
+            <article *ngFor="let device of overview.devices">
+              <div>
+                <strong>{{ device.label || 'Windows POS' }}</strong>
+                <span>{{ device.installationId }}</span>
+                <small>
+                  {{ device.appVersion ? 'Version ' + device.appVersion : 'Version not reported' }}
+                  · {{ device.lastSeenAt ? ('Seen ' + (device.lastSeenAt | date: 'short')) : 'Not seen yet' }}
+                </small>
+              </div>
+              <i class="branch-status" [class.ready]="device.status === 'ACTIVE'">{{
+                device.status
+              }}</i>
+            </article>
+            <p class="branch-manager-empty" *ngIf="!overview.devices.length">
+              <strong>No desktop connected</strong>
+              <span>Create a code to connect the branch PC.</span>
+            </p>
+          </section>
+
+          <section class="device-setup-list" *ngIf="deviceEnrollmentOverview as overview">
+            <header>
+              <div>
+                <strong>Recent enrollment codes</strong>
+                <span>Codes never reveal their secret again after creation.</span>
+              </div>
+            </header>
+            <article *ngFor="let enrollment of overview.enrollments">
+              <div>
+                <strong>{{ enrollment.label || 'Windows POS' }}</strong>
+                <span>Expires {{ enrollment.expiresAt | date: 'short' }}</span>
+              </div>
+              <div class="device-setup-row-actions">
+                <i class="branch-status" [class.ready]="enrollment.status === 'CONSUMED'">{{
+                  enrollment.status
+                }}</i>
+                <button
+                  *ngIf="enrollment.status === 'ACTIVE'"
+                  type="button"
+                  [disabled]="deviceSetupBusy"
+                  (click)="revokeDeviceEnrollment(enrollment.id)"
+                >
+                  Revoke
+                </button>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <footer>
+          <button type="button" class="branch-secondary-button" (click)="closeDeviceSetup()">
+            Done
           </button>
         </footer>
       </section>
