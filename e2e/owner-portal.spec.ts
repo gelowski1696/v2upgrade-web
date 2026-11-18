@@ -2921,6 +2921,51 @@ test('creates and publishes an owner-scoped master-data release', async ({ page 
   await expect(dialog.getByText('Release v1 · PUBLISHED')).toBeVisible();
 });
 
+test('guides owners through branch and people management', async ({ page }) => {
+  test.slow();
+  await seedSession(page);
+  await mockReports(page, async (request) => {
+    const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/users')) {
+      return {
+        json: [
+          {
+            id: 'portal-user',
+            username: 'owner@example.test',
+            displayName: 'Test Owner',
+            role: 'OWNER',
+            status: 'ACTIVE',
+            lastLoginAt: '2026-11-17T08:00:00.000Z',
+            storeAccess: [{ storeId: store.id, store: { code: store.code, name: store.name } }],
+          },
+        ],
+      };
+    }
+    return undefined;
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Branches' }).click();
+  const branchDialog = page.getByRole('dialog', { name: 'Branches and stores' });
+  await expect(branchDialog.getByRole('heading', { name: 'Add a branch' })).toBeVisible();
+  await expect(branchDialog.getByRole('heading', { name: 'Branch readiness' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(branchDialog).toBeHidden();
+
+  await page.getByRole('button', { name: 'Manage web users' }).click();
+  const peopleDialog = page.getByRole('dialog', { name: 'Owner Dashboard users' });
+  await expect(peopleDialog.getByRole('heading', { name: 'Invite a team member' })).toBeVisible();
+  await expect(peopleDialog.getByRole('heading', { name: 'Current access' })).toBeVisible();
+  await peopleDialog.getByRole('button', { name: 'Clear branch selection' }).click();
+  await expect(peopleDialog.getByText('0 branches selected')).toBeVisible();
+  await expect(peopleDialog.getByRole('button', { name: 'Create invitation' })).toBeDisabled();
+  await peopleDialog.getByRole('button', { name: 'Select all branches' }).click();
+  await expect(peopleDialog.getByText('1 branch selected')).toBeVisible();
+
+  const results = await accessibilityScan(page);
+  expect(results.violations.length, formatAccessibilityViolations(results.violations)).toBe(0);
+});
+
 async function navigateToReport(page: Page, name: string): Promise<void> {
   if ((page.viewportSize()?.width ?? 1_000) <= 980) {
     const openMenu = page.getByRole('button', { name: 'Open menu' });

@@ -5465,7 +5465,7 @@
     (click)="closeBranchManager()"
   >
     <section
-      class="branch-manager-dialog"
+      class="branch-manager-dialog branch-manager-dialog--branches"
       role="dialog"
       aria-modal="true"
       aria-labelledby="branch-manager-title"
@@ -5473,19 +5473,30 @@
     >
       <header class="branch-manager-header">
         <div>
-          <p>BUSINESS SETTINGS</p>
+          <p class="branch-manager-eyebrow">BUSINESS SETTINGS</p>
           <h2 id="branch-manager-title">Branches and stores</h2>
-          <span>Add a branch before enrolling its VMJAM Sales workstation.</span>
+          <span>Create locations and see which desktops are ready to sync.</span>
         </div>
         <button type="button" aria-label="Close branch manager" (click)="closeBranchManager()">
           <svg lucideX aria-hidden="true"></svg>
         </button>
       </header>
 
+      <div class="branch-manager-summary" aria-label="Branch summary">
+        <div><strong>{{ stores.length }}</strong><span>Total branches</span></div>
+        <div><strong>{{ syncedBranchCount }}</strong><span>Desktop synced</span></div>
+        <div><strong>{{ pendingBranchCount }}</strong><span>Setup needed</span></div>
+      </div>
+
+      <div class="branch-manager-section-heading">
+        <div><h3>Add a branch</h3><p>Set up the location before installing its desktop app.</p></div>
+      </div>
+
       <form class="branch-manager-form" (ngSubmit)="createBranch()">
         <label>
           <span>Branch code</span>
           <input
+            autofocus
             name="branchCode"
             [(ngModel)]="branchForm.code"
             maxlength="40"
@@ -5526,7 +5537,7 @@
 
       <div class="branch-manager-list">
         <div class="branch-manager-list-heading">
-          <strong>Authorized branches</strong>
+          <div><h3>Branch readiness</h3><small>Check which locations are already connected.</small></div>
           <span>{{ stores.length }} available</span>
         </div>
         <article *ngFor="let store of stores" class="branch-manager-row">
@@ -5541,7 +5552,7 @@
       </div>
 
       <footer class="branch-manager-footer">
-        <span>Branch creation respects your subscription store limit.</span>
+        <span>Branch creation follows the store limit in your subscription.</span>
         <button type="button" class="branch-secondary-button" (click)="closeBranchManager()">
           Close
         </button>
@@ -5555,7 +5566,7 @@
     (click)="closePeopleManager()"
   >
     <section
-      class="branch-manager-dialog"
+      class="branch-manager-dialog branch-manager-dialog--people"
       role="dialog"
       aria-modal="true"
       aria-labelledby="people-manager-title"
@@ -5563,22 +5574,32 @@
     >
       <header class="branch-manager-header">
         <div>
-          <p>ACCESS MANAGEMENT</p>
+          <p class="branch-manager-eyebrow">ACCESS MANAGEMENT</p>
           <h2 id="people-manager-title">Owner Dashboard users</h2>
-          <span>Invite an owner, manager, or viewer and choose their branches.</span>
+          <span>Invite people and control which branches they can view.</span>
         </div>
         <button type="button" aria-label="Close people manager" (click)="closePeopleManager()">
           <svg lucideX aria-hidden="true"></svg>
         </button>
       </header>
 
+      <div class="branch-manager-summary" aria-label="People summary">
+        <div><strong>{{ tenantUsers.length }}</strong><span>Total accounts</span></div>
+        <div><strong>{{ activeTenantUserCount }}</strong><span>Active now</span></div>
+        <div><strong>{{ stores.length }}</strong><span>Available branches</span></div>
+      </div>
+
+      <div class="branch-manager-section-heading">
+        <div><h3>Invite a team member</h3><p>Choose their role and branch access before creating the invitation.</p></div>
+      </div>
+
       <form class="branch-manager-form" (ngSubmit)="createTenantInvitation()">
-        <label><span>Email / username</span><input name="portalUsername" [(ngModel)]="peopleForm.username" maxlength="180" autocomplete="off" required /></label>
+        <label><span>Email / username</span><input autofocus name="portalUsername" [(ngModel)]="peopleForm.username" maxlength="180" autocomplete="off" placeholder="manager@example.com" required /></label>
         <label><span>Display name</span><input name="portalDisplayName" [(ngModel)]="peopleForm.displayName" maxlength="160" required /></label>
         <label>
           <span>Role</span>
           <select name="portalRole" [(ngModel)]="peopleForm.role">
-            <option value="OWNER">Owner</option><option value="MANAGER">Manager</option><option value="VIEWER">Viewer</option>
+            <option value="OWNER">Owner — full access</option><option value="MANAGER">Manager — operational access</option><option value="VIEWER">Viewer — read only</option>
           </select>
         </label>
         <button class="branch-primary-button" type="submit" [disabled]="peopleBusy || !peopleForm.username.trim() || !peopleForm.displayName.trim() || !inviteStoreIds.size">
@@ -5587,7 +5608,10 @@
       </form>
 
       <div class="branch-manager-list">
-        <div class="branch-manager-list-heading"><strong>Branch access</strong><span>{{ inviteStoreIds.size }} selected</span></div>
+        <div class="branch-manager-list-heading">
+          <span><strong>Branch access</strong><small>{{ inviteStoreSelectionLabel }}</small></span>
+          <span class="branch-manager-inline-actions"><button type="button" (click)="selectAllInviteStores()">Select all branches</button><button type="button" (click)="clearInviteStores()">Clear branch selection</button></span>
+        </div>
         <label *ngFor="let store of stores" class="branch-manager-row">
           <span>{{ store.name }} · {{ store.code }}</span>
           <input type="checkbox" [checked]="inviteStoreIds.has(store.id)" (change)="toggleInviteStore(store.id, $any($event.target).checked)" />
@@ -5604,8 +5628,9 @@
       </div>
 
       <div class="branch-manager-list">
-        <div class="branch-manager-list-heading"><strong>Current web users</strong><span>{{ tenantUsers.length }} accounts</span></div>
-        <p *ngIf="peopleLoading" role="status">Loading users...</p>
+        <div class="branch-manager-list-heading"><div><h3>Current access</h3><small>People who can sign in to this dashboard.</small></div><span>{{ tenantUsers.length }} accounts</span></div>
+        <p class="branch-manager-loading" *ngIf="peopleLoading" role="status">Loading user access…</p>
+        <p class="branch-manager-empty" *ngIf="!peopleLoading && !tenantUsers.length"><strong>No dashboard users yet</strong><span>Create the first invitation to get started.</span></p>
         <article *ngFor="let user of tenantUsers" class="branch-manager-row">
           <div><strong>{{ user.displayName }}</strong><span>{{ user.username }} · {{ user.storeAccess.length }} branches</span></div>
           <span class="branch-status">{{ user.role }} · {{ user.status }}</span>
@@ -5613,22 +5638,36 @@
       </div>
 
       <footer class="branch-manager-footer">
-        <span>Activation tokens expire after 48 hours and can be used once.</span>
+        <span>Invitation tokens expire after 48 hours and can only be used once.</span>
         <button type="button" class="branch-secondary-button" (click)="closePeopleManager()">Close</button>
       </footer>
     </section>
   </div>
 
   <div class="branch-manager-backdrop" *ngIf="masterDataManagerOpen" (click)="closeMasterDataManager()">
-    <section class="branch-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="master-data-title" (click)="$event.stopPropagation()">
+    <section class="branch-manager-dialog branch-manager-dialog--master" role="dialog" aria-modal="true" aria-labelledby="master-data-title" (click)="$event.stopPropagation()">
       <header class="branch-manager-header">
         <div>
-          <p>MASTER DATA CONTROL</p>
+          <p class="branch-manager-eyebrow">MASTER DATA CONTROL</p>
           <h2 id="master-data-title">Cloud master releases</h2>
-          <span>Create a draft, review it, then publish it for enrolled desktops.</span>
+          <span>Prepare controlled changes, review the draft, then publish it for enrolled desktops.</span>
         </div>
         <button type="button" aria-label="Close master data manager" (click)="closeMasterDataManager()"><svg lucideX aria-hidden="true"></svg></button>
       </header>
+
+      <div class="branch-manager-summary" aria-label="Master data summary">
+        <div><strong>{{ masterDataEntries.length }}</strong><span>Draft entries</span></div>
+        <div><strong>{{ masterDataReleases.length }}</strong><span>Total releases</span></div>
+        <div><strong>{{ publishedMasterDataReleaseCount }}</strong><span>Published</span></div>
+      </div>
+
+      <div class="branch-manager-workflow" aria-label="Publishing workflow">
+        <span class="active"><b>1</b> Add changes</span><span><b>2</b> Create draft</span><span><b>3</b> Publish</span>
+      </div>
+
+      <div class="branch-manager-section-heading">
+        <div><h3>Add a master-data change</h3><p>Use a stable key so desktops can apply updates safely.</p></div>
+      </div>
 
       <form class="branch-manager-form" (ngSubmit)="addMasterDataEntry()">
         <label>
@@ -5641,18 +5680,18 @@
           <span>Operation</span>
           <select name="masterOperation" [(ngModel)]="masterDataEntryForm.operation"><option value="UPSERT">Create / update</option><option value="DEACTIVATE">Deactivate</option></select>
         </label>
-        <label><span>Stable key</span><input name="masterStableKey" [(ngModel)]="masterDataEntryForm.stableKey" maxlength="180" placeholder="PRODUCT-11KG" required /></label>
+        <label><span>Stable key</span><input autofocus name="masterStableKey" [(ngModel)]="masterDataEntryForm.stableKey" maxlength="180" placeholder="PRODUCT-11KG" required /></label>
         <button class="branch-primary-button" type="submit" [disabled]="masterDataBusy">Add entry</button>
-        <label><span>Payload JSON</span><textarea name="masterPayload" [(ngModel)]="masterDataEntryForm.payload" rows="2" spellcheck="false"></textarea></label>
+        <label class="branch-manager-advanced-field"><span>Data details (JSON) <small>Advanced</small></span><textarea aria-label="Payload JSON" name="masterPayload" [(ngModel)]="masterDataEntryForm.payload" rows="3" spellcheck="false"></textarea><small>Enter one JSON object containing the approved values for this record.</small></label>
       </form>
 
       <div class="branch-manager-list">
-        <div class="branch-manager-list-heading"><strong>Draft entries</strong><span>{{ masterDataEntries.length }} entries</span></div>
+        <div class="branch-manager-list-heading"><span><strong>Review draft</strong><small>Confirm every change before creating a release.</small></span><span>{{ masterDataEntries.length }} entries</span></div>
         <article *ngFor="let entry of masterDataEntries; let entryIndex = index" class="branch-manager-row">
           <div><strong>{{ entry.entityType }} · {{ entry.stableKey }}</strong><span>{{ entry.operation }} · {{ entry.payload | json }}</span></div>
           <button type="button" class="branch-secondary-button" (click)="removeMasterDataEntry(entryIndex)">Remove</button>
         </article>
-        <p *ngIf="!masterDataEntries.length">No draft entries yet.</p>
+        <p class="branch-manager-empty" *ngIf="!masterDataEntries.length"><strong>No changes in this draft</strong><span>Add a master-data change to continue.</span></p>
       </div>
 
       <label class="branch-manager-list"><span>Release notes</span><textarea name="masterNotes" [(ngModel)]="masterDataNotes" rows="2" maxlength="1000" placeholder="Initial product catalog"></textarea></label>
@@ -5662,8 +5701,9 @@
       <p class="branch-manager-message success" *ngIf="masterDataStatus" role="status">{{ masterDataStatus }}</p>
 
       <div class="branch-manager-list">
-        <div class="branch-manager-list-heading"><strong>Release history</strong><span>{{ masterDataReleases.length }} releases</span></div>
-        <p *ngIf="masterDataLoading" role="status">Loading releases...</p>
+        <div class="branch-manager-list-heading"><span><strong>Release history</strong><small>Draft, published, and rolled-back versions.</small></span><span>{{ masterDataReleases.length }} releases</span></div>
+        <p class="branch-manager-loading" *ngIf="masterDataLoading" role="status">Loading releases…</p>
+        <p class="branch-manager-empty" *ngIf="!masterDataLoading && !masterDataReleases.length"><strong>No releases yet</strong><span>Create a draft to start the release history.</span></p>
         <article *ngFor="let release of masterDataReleases" class="branch-manager-row">
           <div><strong>Release v{{ release.version }} · {{ release.status }}</strong><span>{{ release._count.entries }} entries · {{ release.notes || 'No notes' }}</span></div>
           <span>
@@ -5673,7 +5713,7 @@
         </article>
       </div>
 
-      <footer class="branch-manager-footer"><span>Publishing does not change local POS data until an enrolled desktop downloads and applies the release.</span><button type="button" class="branch-secondary-button" (click)="closeMasterDataManager()">Close</button></footer>
+      <footer class="branch-manager-footer"><span>Publishing only makes a release available. Enrolled desktops still download and apply it separately.</span><button type="button" class="branch-secondary-button" (click)="closeMasterDataManager()">Close</button></footer>
     </section>
   </div>
 </ng-template>

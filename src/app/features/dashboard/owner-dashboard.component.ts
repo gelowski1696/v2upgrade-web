@@ -924,6 +924,28 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     else next.delete(storeId);
     this.inviteStoreIds = next;
   }
+  selectAllInviteStores(): void {
+    this.inviteStoreIds = new Set(this.stores.map((store) => store.id));
+  }
+  clearInviteStores(): void {
+    this.inviteStoreIds = new Set();
+  }
+  get inviteStoreSelectionLabel(): string {
+    const count = this.inviteStoreIds.size;
+    return `${count} ${count === 1 ? 'branch' : 'branches'} selected`;
+  }
+  get syncedBranchCount(): number {
+    return this.stores.filter((store) => store.activeSnapshot).length;
+  }
+  get pendingBranchCount(): number {
+    return this.stores.length - this.syncedBranchCount;
+  }
+  get activeTenantUserCount(): number {
+    return this.tenantUsers.filter((user) => user.status === 'ACTIVE').length;
+  }
+  get publishedMasterDataReleaseCount(): number {
+    return this.masterDataReleases.filter((release) => release.status === 'PUBLISHED').length;
+  }
   async createTenantInvitation(): Promise<void> {
     if (
       !this.canManageBranches ||
@@ -2341,7 +2363,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   }
   @HostListener('document:keydown.escape')
   closeSaleDetailsOnEscape(): void {
-    if (this.ownerAlertsOpen) {
+    if (this.masterDataManagerOpen) {
+      this.closeMasterDataManager();
+    } else if (this.peopleManagerOpen) {
+      this.closePeopleManager();
+    } else if (this.branchManagerOpen) {
+      this.closeBranchManager();
+    } else if (this.ownerAlertsOpen) {
       this.ownerAlertsOpen = false;
     } else if (this.exportFormatOpen) {
       this.exportFormatOpen = false;
