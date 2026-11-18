@@ -127,7 +127,11 @@ export class PortalApiService {
   stores(): Promise<PortalStore[]> {
     return this.get<PortalStore[]>('/portal/stores');
   }
-  createStore(input: { code: string; name: string; timezone?: string }): Promise<ProvisionedPortalStore> {
+  createStore(input: {
+    code: string;
+    name: string;
+    timezone?: string;
+  }): Promise<ProvisionedPortalStore> {
     return this.authorized('POST', '/portal/stores', input);
   }
   tenantUsers(): Promise<PortalTenantUser[]> {
@@ -144,14 +148,28 @@ export class PortalApiService {
   masterDataReleases(): Promise<MasterDataReleaseSummary[]> {
     return this.get<MasterDataReleaseSummary[]>('/portal/master-releases');
   }
-  createMasterDataRelease(input: { entries: MasterDataReleaseEntry[]; notes?: string }): Promise<MasterDataReleaseDetail> {
+  masterDataRelease(releaseId: string): Promise<MasterDataReleaseDetail> {
+    return this.get<MasterDataReleaseDetail>(
+      `/portal/master-releases/${encodeURIComponent(releaseId)}`,
+    );
+  }
+  createMasterDataRelease(input: {
+    entries: MasterDataReleaseEntry[];
+    notes?: string;
+  }): Promise<MasterDataReleaseDetail> {
     return this.authorized('POST', '/portal/master-releases', input);
   }
   publishMasterDataRelease(releaseId: string): Promise<MasterDataReleaseDetail> {
-    return this.authorized('POST', `/portal/master-releases/${encodeURIComponent(releaseId)}/publish`);
+    return this.authorized(
+      'POST',
+      `/portal/master-releases/${encodeURIComponent(releaseId)}/publish`,
+    );
   }
   rollbackMasterDataRelease(releaseId: string): Promise<MasterDataReleaseSummary> {
-    return this.authorized('POST', `/portal/master-releases/${encodeURIComponent(releaseId)}/rollback`);
+    return this.authorized(
+      'POST',
+      `/portal/master-releases/${encodeURIComponent(releaseId)}/rollback`,
+    );
   }
   analyticsConfiguration(): Promise<WebAnalyticsConfiguration> {
     return this.get<WebAnalyticsConfiguration>('/portal/analytics/configuration');
@@ -321,29 +339,17 @@ export class PortalApiService {
       `/portal/stores/${encodeURIComponent(storeId)}/customers/${encodeURIComponent(String(customerId))}/purchase-history?${query.toString()}`,
     );
   }
-  customers<T>(
-    storeId: string,
-    page = 1,
-    filters: ReportFilters = {},
-  ): Promise<FreshResponse<T>> {
+  customers<T>(storeId: string, page = 1, filters: ReportFilters = {}): Promise<FreshResponse<T>> {
     const query = this.reportQuery('', '', filters);
     query.set('page', String(page));
     query.set('pageSize', '25');
-    return this.get(
-      `/portal/stores/${encodeURIComponent(storeId)}/customers?${query.toString()}`,
-    );
+    return this.get(`/portal/stores/${encodeURIComponent(storeId)}/customers?${query.toString()}`);
   }
-  personnel<T>(
-    storeId: string,
-    page = 1,
-    filters: ReportFilters = {},
-  ): Promise<FreshResponse<T>> {
+  personnel<T>(storeId: string, page = 1, filters: ReportFilters = {}): Promise<FreshResponse<T>> {
     const query = this.reportQuery('', '', filters);
     query.set('page', String(page));
     query.set('pageSize', '25');
-    return this.get(
-      `/portal/stores/${encodeURIComponent(storeId)}/personnel?${query.toString()}`,
-    );
+    return this.get(`/portal/stores/${encodeURIComponent(storeId)}/personnel?${query.toString()}`);
   }
   customerLendHistory<T>(
     storeId: string,

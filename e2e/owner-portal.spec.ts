@@ -2892,6 +2892,24 @@ test('creates and publishes an owner-scoped master-data release', async ({ page 
         },
       };
     }
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/master-releases/release-1')) {
+      return {
+        json: {
+          id: 'release-1',
+          clientId: user.clientId,
+          version: 1,
+          status: releaseStatus,
+          releaseHash: releaseStatus === 'PUBLISHED' ? 'sha256:test' : null,
+          notes: 'Pilot catalog',
+          createdById: user.id,
+          publishedAt: releaseStatus === 'PUBLISHED' ? '2026-11-15T08:00:00.000Z' : null,
+          rolledBackAt: null,
+          createdAt: '2026-11-15T07:00:00.000Z',
+          _count: { entries: releaseEntries.length },
+          entries: releaseEntries,
+        },
+      };
+    }
     if (
       request.method() === 'POST' &&
       url.pathname.endsWith('/portal/master-releases/release-1/publish')
@@ -2904,41 +2922,113 @@ test('creates and publishes an owner-scoped master-data release', async ({ page 
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Master data' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Cloud master releases' });
+  const dialog = page.getByRole('dialog', { name: 'Products and master data' });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel('Stable key').fill('PRODUCT-11KG');
-  await dialog.getByLabel('Payload JSON').fill('{"name":"11 kg LPG","active":true}');
-  await dialog.getByRole('button', { name: 'Add entry' }).click();
-  await expect(dialog.getByText('PRODUCT-11KG')).toBeVisible();
-  await dialog.getByRole('textbox', { name: 'Release notes' }).fill('Pilot catalog');
-  await dialog.getByRole('button', { name: 'Create draft release' }).click();
+  await dialog.getByRole('button', { name: 'Add product' }).click();
+  const editor = page.getByRole('dialog', { name: 'Add product' });
+  await editor.getByLabel('Name').fill('11 kg LPG');
+  await editor.getByLabel('Product code').fill('PRODUCT-11KG');
+  await editor.getByRole('spinbutton', { name: 'Refill price ₱', exact: true }).fill('950');
+  await editor.getByRole('spinbutton', { name: 'Non-refill price ₱', exact: true }).fill('2500');
+  await editor.getByRole('button', { name: 'Add to draft' }).click();
+  await expect(dialog.getByText('PRODUCT-11KG', { exact: true })).toBeVisible();
+  await dialog.getByLabel('Release notes').fill('Pilot catalog');
+  await dialog.getByRole('button', { name: 'Create release draft' }).click();
   await expect(dialog.getByRole('status').getByText('Draft release created.')).toBeVisible();
-  await expect(dialog.getByText('Release v1 · DRAFT')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Release history' }).click();
+  await expect(dialog.getByText('Version 1')).toBeVisible();
+  await expect(dialog.getByText('DRAFT', { exact: true })).toBeVisible();
 
   page.once('dialog', (confirmation) => confirmation.accept());
   await dialog.getByRole('button', { name: 'Publish' }).click();
   await expect(dialog.getByRole('status').getByText('Release published.')).toBeVisible();
-  await expect(dialog.getByText('Release v1 · PUBLISHED')).toBeVisible();
+  await expect(dialog.getByText('PUBLISHED', { exact: true })).toBeVisible();
 });
 
 test('guides owners through branch and people management', async ({ page }) => {
   test.slow();
   await seedSession(page);
+  const branchList: Array<
+    Omit<typeof store, 'activeSnapshot'> & { activeSnapshot: typeof store.activeSnapshot | null }
+  > = [store];
+  const portalUsers: Array<{
+    id: string;
+    username: string;
+    displayName: string;
+    role: 'OWNER' | 'MANAGER' | 'VIEWER';
+    status: 'INVITED' | 'ACTIVE' | 'DISABLED';
+    lastLoginAt: string | null;
+    storeAccess: Array<{ storeId: string; store: { code: string; name: string } }>;
+  }> = [
+    {
+      id: 'portal-user',
+      username: 'owner@example.test',
+      displayName: 'Test Owner',
+      role: 'OWNER',
+      status: 'ACTIVE',
+      lastLoginAt: '2026-11-17T08:00:00.000Z',
+      storeAccess: [{ storeId: store.id, store: { code: store.code, name: store.name } }],
+    },
+  ];
   await mockReports(page, async (request) => {
     const url = new URL(request.url());
-    if (request.method() === 'GET' && url.pathname.endsWith('/portal/users')) {
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/stores')) {
+      return { json: branchList };
+    }
+    if (request.method() === 'POST' && url.pathname.endsWith('/portal/stores')) {
+      const body = request.postDataJSON() as { code: string; name: string; timezone: string };
+      const created = {
+        ...store,
+        id: 'store-north',
+        code: body.code,
+        name: body.name,
+        timezone: body.timezone,
+        activeSnapshot: null,
+      };
+      branchList.push(created);
       return {
-        json: [
-          {
-            id: 'portal-user',
-            username: 'owner@example.test',
-            displayName: 'Test Owner',
-            role: 'OWNER',
-            status: 'ACTIVE',
-            lastLoginAt: '2026-11-17T08:00:00.000Z',
-            storeAccess: [{ storeId: store.id, store: { code: store.code, name: store.name } }],
+        json: {
+          id: created.id,
+          clientId: user.clientId,
+          code: created.code,
+          name: created.name,
+          timezone: created.timezone,
+          status: 'ACTIVE',
+        },
+      };
+    }
+    if (request.method() === 'GET' && url.pathname.endsWith('/portal/users')) {
+      return { json: portalUsers };
+    }
+    if (request.method() === 'POST' && url.pathname.endsWith('/portal/users/invitations')) {
+      const body = request.postDataJSON() as {
+        username: string;
+        displayName: string;
+        role: 'OWNER' | 'MANAGER' | 'VIEWER';
+        storeIds: string[];
+      };
+      portalUsers.push({
+        id: 'portal-manager',
+        username: body.username,
+        displayName: body.displayName,
+        role: body.role,
+        status: 'INVITED',
+        lastLoginAt: null,
+        storeAccess: body.storeIds.map((storeId) => {
+          const assigned = branchList.find((branch) => branch.id === storeId) ?? store;
+          return { storeId, store: { code: assigned.code, name: assigned.name } };
+        }),
+      });
+      return {
+        json: {
+          mode: 'INVITATION_CREATED',
+          invitation: {
+            id: 'invitation-manager',
+            ...body,
+            expiresAt: '2026-11-20T08:00:00.000Z',
+            activationToken: 'owner-manager-activation-token',
           },
-        ],
+        },
       };
     }
     return undefined;
@@ -2947,20 +3037,35 @@ test('guides owners through branch and people management', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Branches' }).click();
   const branchDialog = page.getByRole('dialog', { name: 'Branches and stores' });
-  await expect(branchDialog.getByRole('heading', { name: 'Add a branch' })).toBeVisible();
-  await expect(branchDialog.getByRole('heading', { name: 'Branch readiness' })).toBeVisible();
+  await expect(branchDialog.getByRole('table', { name: 'Branches and stores' })).toBeVisible();
+  await branchDialog.getByRole('button', { name: 'Add branch' }).click();
+  const branchEditor = page.getByRole('dialog', { name: 'Add branch' });
+  await branchEditor.getByLabel('Branch name').fill('North Branch');
+  await branchEditor.getByLabel('Branch code').fill('NORTH');
+  await branchEditor.getByRole('button', { name: 'Add branch', exact: true }).click();
+  await expect(branchEditor).toBeHidden();
+  await expect(
+    branchDialog.getByRole('table', { name: 'Branches and stores' }).getByText('North Branch'),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(branchDialog).toBeHidden();
 
   await page.getByRole('button', { name: 'Manage web users' }).click();
   const peopleDialog = page.getByRole('dialog', { name: 'Owner Dashboard users' });
-  await expect(peopleDialog.getByRole('heading', { name: 'Invite a team member' })).toBeVisible();
-  await expect(peopleDialog.getByRole('heading', { name: 'Current access' })).toBeVisible();
-  await peopleDialog.getByRole('button', { name: 'Clear branch selection' }).click();
-  await expect(peopleDialog.getByText('0 branches selected')).toBeVisible();
-  await expect(peopleDialog.getByRole('button', { name: 'Create invitation' })).toBeDisabled();
-  await peopleDialog.getByRole('button', { name: 'Select all branches' }).click();
-  await expect(peopleDialog.getByText('1 branch selected')).toBeVisible();
+  await expect(peopleDialog.getByRole('table', { name: 'Owner Dashboard users' })).toBeVisible();
+  await peopleDialog.getByRole('button', { name: 'Add user' }).click();
+  const peopleEditor = page.getByRole('dialog', { name: 'Add dashboard user' });
+  await peopleEditor.getByLabel('Display name').fill('North Manager');
+  await peopleEditor.getByLabel('Email / username').fill('north.manager@example.test');
+  await peopleEditor.getByRole('button', { name: 'Clear' }).click();
+  await expect(peopleEditor.getByText('0 branches selected')).toBeVisible();
+  await expect(peopleEditor.getByRole('button', { name: 'Create invitation' })).toBeDisabled();
+  await peopleEditor.getByRole('button', { name: 'Select all' }).click();
+  await expect(peopleEditor.getByText('2 branches selected')).toBeVisible();
+  await peopleEditor.getByRole('button', { name: 'Create invitation' }).click();
+  await expect(peopleEditor.getByText('Invitation ready')).toBeVisible();
+  await peopleEditor.getByRole('button', { name: 'Done' }).click();
+  await expect(peopleDialog.getByText('North Manager')).toBeVisible();
 
   const results = await accessibilityScan(page);
   expect(results.violations.length, formatAccessibilityViolations(results.violations)).toBe(0);

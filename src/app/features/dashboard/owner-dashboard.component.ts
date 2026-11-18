@@ -110,6 +110,31 @@ import { LpgLandingPageComponent } from '../landing/lpg-landing-page.component';
 
 type ReportExportFormat = 'csv' | 'pdf';
 type ExportTarget = 'current' | 'customer-sales-history' | 'customer-lend-history';
+type MasterDataWorkspaceView = MasterDataEntityType | 'RELEASES';
+
+interface MasterDataEditorForm {
+  operation: MasterDataChangeOperation;
+  stableKey: string;
+  code: string;
+  name: string;
+  categoryKey: string;
+  brandKey: string;
+  sizeKey: string;
+  unit: string;
+  kilograms: string;
+  refillPrice: string;
+  nonRefillPrice: string;
+  cost: string;
+  alertLevel: string;
+  contactNumber: string;
+  address: string;
+}
+
+interface MasterDataCatalogRow {
+  entry: MasterDataReleaseEntry;
+  pending: boolean;
+  deactivating: boolean;
+}
 
 @Component({
   selector: 'app-owner-dashboard',
@@ -200,8 +225,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   branchBusy = false;
   branchError = '';
   branchStatus = '';
+  branchEditorOpen = false;
+  branchSearch = '';
+  filteredBranches: PortalStore[] = [];
   branchForm = { code: '', name: '', timezone: 'Asia/Manila' };
   peopleManagerOpen = false;
+  peopleEditorOpen = false;
+  peopleSearch = '';
+  filteredTenantUsers: PortalTenantUser[] = [];
   peopleLoading = false;
   peopleBusy = false;
   peopleError = '';
@@ -220,14 +251,31 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   masterDataError = '';
   masterDataStatus = '';
   masterDataReleases: MasterDataReleaseSummary[] = [];
+  publishedMasterDataEntries: MasterDataReleaseEntry[] = [];
   masterDataNotes = '';
   masterDataEntries: MasterDataReleaseEntry[] = [];
-  masterDataEntryForm: {
-    entityType: MasterDataEntityType;
-    operation: MasterDataChangeOperation;
-    stableKey: string;
-    payload: string;
-  } = { entityType: 'PRODUCT', operation: 'UPSERT', stableKey: '', payload: '{"name":""}' };
+  masterDataView: MasterDataWorkspaceView = 'PRODUCT';
+  masterDataSearch = '';
+  masterDataEditorOpen = false;
+  masterDataCatalogRows: MasterDataCatalogRow[] = [];
+  masterDataOptionMap: Record<MasterDataEntityType, MasterDataReleaseEntry[]> = {
+    CATEGORY: [],
+    BRAND: [],
+    CYLINDER_SIZE: [],
+    PRODUCT: [],
+    SUPPLIER: [],
+    PRICE: [],
+  };
+  masterDataEntryForm: MasterDataEditorForm = this.emptyMasterDataForm();
+  readonly masterDataSections: Array<{ key: MasterDataWorkspaceView; label: string }> = [
+    { key: 'PRODUCT', label: 'Products' },
+    { key: 'CATEGORY', label: 'Categories' },
+    { key: 'BRAND', label: 'Brands' },
+    { key: 'CYLINDER_SIZE', label: 'Cylinder sizes' },
+    { key: 'SUPPLIER', label: 'Suppliers' },
+    { key: 'PRICE', label: 'Prices' },
+    { key: 'RELEASES', label: 'Release history' },
+  ];
   loading = false;
   error = '';
   exporting = false;
@@ -585,14 +633,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       : null;
   }
   get peakHoursReport(): PeakHoursReportData | null {
-    return this.activeView === 'peak-hours'
-      ? (this.response?.data as PeakHoursReportData)
-      : null;
+    return this.activeView === 'peak-hours' ? (this.response?.data as PeakHoursReportData) : null;
   }
   get busiestPeakHour(): PeakHourRecord | null {
     return (this.peakHoursReport?.items ?? []).reduce<PeakHourRecord | null>(
-      (busiest, row) =>
-        !busiest || row.transactions > busiest.transactions ? row : busiest,
+      (busiest, row) => (!busiest || row.transactions > busiest.transactions ? row : busiest),
       null,
     );
   }
@@ -860,15 +905,46 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   openBranchManager(): void {
     if (!this.canManageBranches) return;
     this.branchManagerOpen = true;
+    this.branchEditorOpen = false;
+    this.branchSearch = '';
     this.branchError = '';
     this.branchStatus = '';
-    this.branchForm = { code: '', name: '', timezone: this.selectedStore?.timezone || 'Asia/Manila' };
+    this.branchForm = {
+      code: '',
+      name: '',
+      timezone: this.selectedStore?.timezone || 'Asia/Manila',
+    };
+    this.updateFilteredBranches();
   }
   closeBranchManager(): void {
     if (this.branchBusy) return;
     this.branchManagerOpen = false;
+    this.branchEditorOpen = false;
     this.branchError = '';
     this.branchStatus = '';
+  }
+  openBranchEditor(): void {
+    this.branchForm = {
+      code: '',
+      name: '',
+      timezone: this.selectedStore?.timezone || 'Asia/Manila',
+    };
+    this.branchError = '';
+    this.branchStatus = '';
+    this.branchEditorOpen = true;
+  }
+  closeBranchEditor(): void {
+    if (!this.branchBusy) this.branchEditorOpen = false;
+  }
+  updateFilteredBranches(): void {
+    const term = this.branchSearch.trim().toLocaleLowerCase();
+    this.filteredBranches = !term
+      ? [...this.stores]
+      : this.stores.filter((store) =>
+          [store.name, store.code, store.timezone].some((value) =>
+            value.toLocaleLowerCase().includes(term),
+          ),
+        );
   }
   async createBranch(): Promise<void> {
     if (
@@ -889,11 +965,13 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
         timezone: this.branchForm.timezone.trim() || 'Asia/Manila',
       });
       await this.loadStores();
+      this.updateFilteredBranches();
       this.selectedStoreId = created.id;
       localStorage.setItem('posv2.portalStoreId', created.id);
       await this.changeStore();
       this.branchForm = { code: '', name: '', timezone: created.timezone };
       this.branchStatus = `${created.name} was added and is ready for desktop setup.`;
+      this.branchEditorOpen = false;
       this.changeDetector.detectChanges();
     } catch (error) {
       this.branchError = this.message(error, 'The branch could not be created.');
@@ -905,6 +983,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   async openPeopleManager(): Promise<void> {
     if (!this.canManageBranches) return;
     this.peopleManagerOpen = true;
+    this.peopleEditorOpen = false;
+    this.peopleSearch = '';
     this.peopleError = '';
     this.peopleStatus = '';
     this.invitationToken = '';
@@ -914,9 +994,35 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   closePeopleManager(): void {
     if (this.peopleBusy) return;
     this.peopleManagerOpen = false;
+    this.peopleEditorOpen = false;
     this.peopleError = '';
     this.peopleStatus = '';
     this.invitationToken = '';
+  }
+  openPeopleEditor(): void {
+    this.peopleForm = { username: '', displayName: '', role: 'MANAGER' };
+    this.inviteStoreIds = new Set(this.stores.map((store) => store.id));
+    this.peopleError = '';
+    this.peopleStatus = '';
+    this.invitationToken = '';
+    this.peopleEditorOpen = true;
+  }
+  closePeopleEditor(): void {
+    if (!this.peopleBusy) this.peopleEditorOpen = false;
+  }
+  updateFilteredTenantUsers(): void {
+    const term = this.peopleSearch.trim().toLocaleLowerCase();
+    this.filteredTenantUsers = !term
+      ? [...this.tenantUsers]
+      : this.tenantUsers.filter((user) =>
+          [
+            user.displayName,
+            user.username,
+            user.role,
+            user.status,
+            ...user.storeAccess.map((access) => access.store.name),
+          ].some((value) => value.toLocaleLowerCase().includes(term)),
+        );
   }
   toggleInviteStore(storeId: string, selected: boolean): void {
     const next = new Set(this.inviteStoreIds);
@@ -953,7 +1059,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       !this.peopleForm.username.trim() ||
       !this.peopleForm.displayName.trim() ||
       !this.inviteStoreIds.size
-    ) return;
+    )
+      return;
     this.peopleBusy = true;
     this.peopleError = '';
     this.peopleStatus = '';
@@ -985,6 +1092,7 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.peopleLoading = true;
     try {
       this.tenantUsers = await this.api.tenantUsers();
+      this.updateFilteredTenantUsers();
     } catch (error) {
       this.peopleError = this.message(error, 'Tenant users could not be loaded.');
     } finally {
@@ -995,6 +1103,9 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   async openMasterDataManager(): Promise<void> {
     if (!this.canManageBranches) return;
     this.masterDataManagerOpen = true;
+    this.masterDataEditorOpen = false;
+    this.masterDataView = 'PRODUCT';
+    this.masterDataSearch = '';
     this.masterDataError = '';
     this.masterDataStatus = '';
     this.masterDataEntries = [];
@@ -1004,44 +1115,211 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   closeMasterDataManager(): void {
     if (this.masterDataBusy) return;
     this.masterDataManagerOpen = false;
+    this.masterDataEditorOpen = false;
     this.masterDataError = '';
     this.masterDataStatus = '';
   }
-  addMasterDataEntry(): void {
-    const stableKey = this.masterDataEntryForm.stableKey.trim().toUpperCase();
-    if (!stableKey) {
-      this.masterDataError = 'Enter a stable key before adding the entry.';
+  selectMasterDataView(view: MasterDataWorkspaceView): void {
+    this.masterDataView = view;
+    this.masterDataSearch = '';
+    this.masterDataError = '';
+    this.refreshMasterDataCollections();
+  }
+  openMasterDataEditor(entry?: MasterDataReleaseEntry): void {
+    if (this.masterDataView === 'RELEASES' && !entry) return;
+    if (entry) this.masterDataView = entry.entityType;
+    this.masterDataEntryForm = entry
+      ? this.masterDataFormFromEntry(entry)
+      : this.emptyMasterDataForm();
+    this.masterDataError = '';
+    this.masterDataStatus = '';
+    this.masterDataEditorOpen = true;
+  }
+  closeMasterDataEditor(): void {
+    if (!this.masterDataBusy) this.masterDataEditorOpen = false;
+  }
+  refreshMasterDataCollections(): void {
+    const optionMaps: Record<MasterDataEntityType, Map<string, MasterDataReleaseEntry>> = {
+      CATEGORY: new Map(),
+      BRAND: new Map(),
+      CYLINDER_SIZE: new Map(),
+      PRODUCT: new Map(),
+      SUPPLIER: new Map(),
+      PRICE: new Map(),
+    };
+    for (const entry of this.publishedMasterDataEntries)
+      optionMaps[entry.entityType].set(entry.stableKey, entry);
+    for (const entry of this.masterDataEntries) {
+      if (entry.operation === 'DEACTIVATE') optionMaps[entry.entityType].delete(entry.stableKey);
+      else optionMaps[entry.entityType].set(entry.stableKey, entry);
+    }
+    this.masterDataOptionMap = {
+      CATEGORY: this.sortedMasterDataEntries(optionMaps.CATEGORY),
+      BRAND: this.sortedMasterDataEntries(optionMaps.BRAND),
+      CYLINDER_SIZE: this.sortedMasterDataEntries(optionMaps.CYLINDER_SIZE),
+      PRODUCT: this.sortedMasterDataEntries(optionMaps.PRODUCT),
+      SUPPLIER: this.sortedMasterDataEntries(optionMaps.SUPPLIER),
+      PRICE: this.sortedMasterDataEntries(optionMaps.PRICE),
+    };
+    if (this.masterDataView === 'RELEASES') {
+      this.masterDataCatalogRows = [];
       return;
     }
-    try {
-      const payload = JSON.parse(this.masterDataEntryForm.payload) as unknown;
-      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-        throw new Error('Payload must be a JSON object.');
+    const rows = new Map<string, MasterDataCatalogRow>();
+    for (const entry of this.publishedMasterDataEntries) {
+      if (entry.entityType === this.masterDataView) {
+        rows.set(entry.stableKey, { entry, pending: false, deactivating: false });
       }
-      if (this.masterDataEntries.some((entry) => entry.entityType === this.masterDataEntryForm.entityType && entry.stableKey === stableKey)) {
-        throw new Error('This entity type and stable key are already in the draft.');
-      }
-      this.masterDataEntries = [
-        ...this.masterDataEntries,
-        {
-          entityType: this.masterDataEntryForm.entityType,
-          operation: this.masterDataEntryForm.operation,
-          stableKey,
-          payload: payload as Record<string, unknown>,
-        },
-      ];
-      this.masterDataEntryForm = {
-        ...this.masterDataEntryForm,
-        stableKey: '',
-        payload: '{"name":""}',
-      };
-      this.masterDataError = '';
-    } catch (error) {
-      this.masterDataError = error instanceof Error ? error.message : 'Entry payload is invalid JSON.';
     }
+    for (const entry of this.masterDataEntries) {
+      if (entry.entityType !== this.masterDataView) continue;
+      if (entry.operation === 'DEACTIVATE') {
+        const current = rows.get(entry.stableKey);
+        rows.set(entry.stableKey, {
+          entry: current?.entry ?? entry,
+          pending: true,
+          deactivating: true,
+        });
+      } else {
+        rows.set(entry.stableKey, { entry, pending: true, deactivating: false });
+      }
+    }
+    const term = this.masterDataSearch.trim().toLocaleLowerCase();
+    this.masterDataCatalogRows = [...rows.values()]
+      .filter(
+        (row) =>
+          !term ||
+          [
+            row.entry.stableKey,
+            this.masterDataEntryName(row.entry),
+            this.masterDataEntryDetails(row.entry),
+          ].some((value) => value.toLocaleLowerCase().includes(term)),
+      )
+      .sort((left, right) =>
+        this.masterDataEntryName(left.entry).localeCompare(this.masterDataEntryName(right.entry)),
+      );
   }
-  removeMasterDataEntry(index: number): void {
-    this.masterDataEntries = this.masterDataEntries.filter((_, entryIndex) => entryIndex !== index);
+  get masterDataSectionLabel(): string {
+    return (
+      this.masterDataSections.find((section) => section.key === this.masterDataView)?.label ??
+      'Master data'
+    );
+  }
+  stageMasterDataEntry(): void {
+    if (this.masterDataView === 'RELEASES') return;
+    const entityType = this.masterDataView;
+    const stableKey = this.masterStableKey(
+      this.masterDataEntryForm.stableKey ||
+        this.masterDataEntryForm.code ||
+        this.masterDataEntryForm.name,
+    );
+    if (!stableKey) {
+      this.masterDataError = 'Enter a record code or name before adding this change.';
+      return;
+    }
+    if (
+      this.masterDataEntryForm.operation === 'UPSERT' &&
+      entityType !== 'PRICE' &&
+      !this.masterDataEntryForm.name.trim()
+    ) {
+      this.masterDataError = `Enter the ${this.masterDataEntityLabel(entityType).toLocaleLowerCase()} name.`;
+      return;
+    }
+    if (entityType === 'PRICE' && !this.masterDataEntryForm.code.trim()) {
+      this.masterDataError = 'Enter the product code for this price.';
+      return;
+    }
+    const entry: MasterDataReleaseEntry = {
+      entityType,
+      operation: this.masterDataEntryForm.operation,
+      stableKey,
+      payload:
+        this.masterDataEntryForm.operation === 'DEACTIVATE'
+          ? {}
+          : this.buildMasterDataPayload(entityType),
+    };
+    this.masterDataEntries = [
+      ...this.masterDataEntries.filter(
+        (candidate) => candidate.entityType !== entityType || candidate.stableKey !== stableKey,
+      ),
+      entry,
+    ];
+    this.masterDataEditorOpen = false;
+    this.masterDataEntryForm = this.emptyMasterDataForm();
+    this.masterDataError = '';
+    this.masterDataStatus = `${this.masterDataEntityLabel(entityType)} change added to the draft.`;
+    this.refreshMasterDataCollections();
+  }
+  stageMasterDataDeactivation(entry: MasterDataReleaseEntry): void {
+    this.masterDataEntries = [
+      ...this.masterDataEntries.filter(
+        (candidate) =>
+          candidate.entityType !== entry.entityType || candidate.stableKey !== entry.stableKey,
+      ),
+      {
+        entityType: entry.entityType,
+        operation: 'DEACTIVATE',
+        stableKey: entry.stableKey,
+        payload: {},
+      },
+    ];
+    this.masterDataStatus = `${this.masterDataEntryName(entry)} will be deactivated when this draft is published.`;
+    this.refreshMasterDataCollections();
+  }
+  removeMasterDataEntry(entryOrIndex: MasterDataReleaseEntry | number): void {
+    if (typeof entryOrIndex === 'number') {
+      this.masterDataEntries = this.masterDataEntries.filter((_, index) => index !== entryOrIndex);
+      this.refreshMasterDataCollections();
+      return;
+    }
+    this.masterDataEntries = this.masterDataEntries.filter(
+      (entry) =>
+        entry !== entryOrIndex &&
+        (entry.entityType !== entryOrIndex.entityType ||
+          entry.stableKey !== entryOrIndex.stableKey),
+    );
+    this.refreshMasterDataCollections();
+  }
+  masterDataEntryName(entry: MasterDataReleaseEntry): string {
+    return String(
+      entry.payload['name'] ||
+        entry.payload['productName'] ||
+        entry.payload['code'] ||
+        entry.stableKey,
+    );
+  }
+  masterDataEntryDetails(entry: MasterDataReleaseEntry): string {
+    const fields = [
+      entry.payload['code'],
+      entry.payload['categoryKey'],
+      entry.payload['brandKey'],
+      entry.payload['sizeKey'],
+      entry.payload['unit'],
+      entry.payload['contactNumber'],
+    ].filter((value) => value !== undefined && value !== null && String(value).trim());
+    if (entry.entityType === 'PRICE') {
+      fields.push(
+        `Refill ₱${this.formatMasterAmount(entry.payload['refillPrice'])}`,
+        `Non-refill ₱${this.formatMasterAmount(entry.payload['nonRefillPrice'])}`,
+      );
+    }
+    return fields.length ? fields.join(' · ') : entry.stableKey;
+  }
+  masterDataEntityLabel(entityType: MasterDataWorkspaceView): string {
+    if (entityType === 'RELEASES') return 'Release';
+    return (
+      {
+        CATEGORY: 'Category',
+        BRAND: 'Brand',
+        CYLINDER_SIZE: 'Cylinder size',
+        PRODUCT: 'Product',
+        SUPPLIER: 'Supplier',
+        PRICE: 'Price',
+      } as Record<MasterDataEntityType, string>
+    )[entityType];
+  }
+  masterDataOptions(entityType: MasterDataEntityType): MasterDataReleaseEntry[] {
+    return this.masterDataOptionMap[entityType];
   }
   async createMasterDataDraft(): Promise<void> {
     if (!this.canManageBranches || this.masterDataBusy || !this.masterDataEntries.length) {
@@ -1068,14 +1346,27 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     }
   }
   async publishMasterDataDraft(release: MasterDataReleaseSummary): Promise<void> {
-    if (release.status !== 'DRAFT' || this.masterDataBusy || !window.confirm(`Publish master-data release v${release.version}?`)) return;
+    if (
+      release.status !== 'DRAFT' ||
+      this.masterDataBusy ||
+      !window.confirm(`Publish master-data release v${release.version}?`)
+    )
+      return;
     await this.changeMasterDataRelease(release.id, 'publish');
   }
   async rollbackMasterData(release: MasterDataReleaseSummary): Promise<void> {
-    if (release.status !== 'PUBLISHED' || this.masterDataBusy || !window.confirm(`Roll back master-data release v${release.version}?`)) return;
+    if (
+      release.status !== 'PUBLISHED' ||
+      this.masterDataBusy ||
+      !window.confirm(`Roll back master-data release v${release.version}?`)
+    )
+      return;
     await this.changeMasterDataRelease(release.id, 'rollback');
   }
-  private async changeMasterDataRelease(releaseId: string, action: 'publish' | 'rollback'): Promise<void> {
+  private async changeMasterDataRelease(
+    releaseId: string,
+    action: 'publish' | 'rollback',
+  ): Promise<void> {
     this.masterDataBusy = true;
     this.masterDataError = '';
     try {
@@ -1094,12 +1385,125 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.masterDataLoading = true;
     try {
       this.masterDataReleases = await this.api.masterDataReleases();
+      const published = this.masterDataReleases
+        .filter((release) => release.status === 'PUBLISHED')
+        .sort((left, right) => left.version - right.version);
+      const details = await Promise.all(
+        published.map((release) => this.api.masterDataRelease(release.id)),
+      );
+      const effective = new Map<string, MasterDataReleaseEntry>();
+      for (const release of details) {
+        for (const entry of release.entries) {
+          const key = `${entry.entityType}:${entry.stableKey}`;
+          if (entry.operation === 'DEACTIVATE') effective.delete(key);
+          else effective.set(key, entry);
+        }
+      }
+      this.publishedMasterDataEntries = [...effective.values()];
+      this.refreshMasterDataCollections();
     } catch (error) {
       this.masterDataError = this.message(error, 'Master-data releases could not be loaded.');
     } finally {
       this.masterDataLoading = false;
       this.changeDetector.detectChanges();
     }
+  }
+  private emptyMasterDataForm(): MasterDataEditorForm {
+    return {
+      operation: 'UPSERT',
+      stableKey: '',
+      code: '',
+      name: '',
+      categoryKey: '',
+      brandKey: '',
+      sizeKey: '',
+      unit: 'PC',
+      kilograms: '',
+      refillPrice: '',
+      nonRefillPrice: '',
+      cost: '',
+      alertLevel: '',
+      contactNumber: '',
+      address: '',
+    };
+  }
+  private masterDataFormFromEntry(entry: MasterDataReleaseEntry): MasterDataEditorForm {
+    const value = (key: string) =>
+      entry.payload[key] === undefined || entry.payload[key] === null
+        ? ''
+        : String(entry.payload[key]);
+    return {
+      operation: 'UPSERT',
+      stableKey: entry.stableKey,
+      code: value('code'),
+      name: value('name'),
+      categoryKey: value('categoryKey'),
+      brandKey: value('brandKey'),
+      sizeKey: value('sizeKey'),
+      unit: value('unit') || 'PC',
+      kilograms: value('kilograms'),
+      refillPrice: value('refillPrice'),
+      nonRefillPrice: value('nonRefillPrice'),
+      cost: value('cost'),
+      alertLevel: value('alertLevel'),
+      contactNumber: value('contactNumber'),
+      address: value('address'),
+    };
+  }
+  private buildMasterDataPayload(entityType: MasterDataEntityType): Record<string, unknown> {
+    const form = this.masterDataEntryForm;
+    const payload: Record<string, unknown> = {};
+    const text = (key: string, value: string) => {
+      if (value.trim()) payload[key] = value.trim();
+    };
+    const number = (key: string, value: unknown) => {
+      const normalized = String(value ?? '').trim();
+      if (normalized) payload[key] = Number(normalized);
+    };
+    if (entityType !== 'PRICE') text('name', form.name);
+    if (entityType === 'PRODUCT' || entityType === 'PRICE') text('code', form.code);
+    if (entityType === 'PRODUCT') {
+      text('categoryKey', form.categoryKey);
+      text('brandKey', form.brandKey);
+      text('sizeKey', form.sizeKey);
+      text('unit', form.unit);
+      number('cost', form.cost);
+      number('refillPrice', form.refillPrice);
+      number('nonRefillPrice', form.nonRefillPrice);
+      number('alertLevel', form.alertLevel);
+    }
+    if (entityType === 'CYLINDER_SIZE') number('kilograms', form.kilograms);
+    if (entityType === 'SUPPLIER') {
+      text('contactNumber', form.contactNumber);
+      text('address', form.address);
+    }
+    if (entityType === 'PRICE') {
+      number('cost', form.cost);
+      number('refillPrice', form.refillPrice);
+      number('nonRefillPrice', form.nonRefillPrice);
+    }
+    return payload;
+  }
+  private sortedMasterDataEntries(
+    entries: Map<string, MasterDataReleaseEntry>,
+  ): MasterDataReleaseEntry[] {
+    return [...entries.values()].sort((left, right) =>
+      this.masterDataEntryName(left).localeCompare(this.masterDataEntryName(right)),
+    );
+  }
+  private masterStableKey(value: string): string {
+    return value
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 180);
+  }
+  private formatMasterAmount(value: unknown): string {
+    const amount = Number(value);
+    return Number.isFinite(amount)
+      ? amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '0.00';
   }
   async selectView(view: ReportView): Promise<void> {
     this.ownerAlertsOpen = false;
@@ -1572,82 +1976,78 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
                       this.from,
                       this.to,
                     )
-                : this.isSimpleModuleReport(view)
-                  ? await this.api.moduleReport<ModuleReportData<unknown>>(
-                      storeId,
-                      this.moduleReportEndpoint(view),
-                      this.from,
-                      this.to,
-                      this.isPagedModuleReport(view) ? page : undefined,
-                    )
-                  : view === 'overview'
-                    ? await this.api.overview(storeId, this.from, this.to)
-                    : view === 'cash-flow'
-                      ? await this.api.cashFlow(storeId, this.from, this.to)
-                      : view === 'restocks'
-                        ? await this.api.restockMonitoring<RestockMonitoringData>(
-                            storeId,
-                            this.from,
-                            this.to,
-                            page,
-                            this.search,
-                          )
-                        : view === 'products'
-                          ? await this.api.productPerformance<ProductPerformanceData>(
+                  : this.isSimpleModuleReport(view)
+                    ? await this.api.moduleReport<ModuleReportData<unknown>>(
+                        storeId,
+                        this.moduleReportEndpoint(view),
+                        this.from,
+                        this.to,
+                        this.isPagedModuleReport(view) ? page : undefined,
+                      )
+                    : view === 'overview'
+                      ? await this.api.overview(storeId, this.from, this.to)
+                      : view === 'cash-flow'
+                        ? await this.api.cashFlow(storeId, this.from, this.to)
+                        : view === 'restocks'
+                          ? await this.api.restockMonitoring<RestockMonitoringData>(
                               storeId,
                               this.from,
                               this.to,
+                              page,
+                              this.search,
                             )
-                          : view === 'profitability'
-                            ? await this.api.profitability<ProfitabilityData>(
+                          : view === 'products'
+                            ? await this.api.productPerformance<ProductPerformanceData>(
                                 storeId,
                                 this.from,
                                 this.to,
-                                page,
-                                filters,
                               )
-                            : view === 'customer-insights'
-                              ? await this.api.customerInsights<CustomerInsightsData>(
+                            : view === 'profitability'
+                              ? await this.api.profitability<ProfitabilityData>(
                                   storeId,
                                   this.from,
                                   this.to,
                                   page,
                                   filters,
                                 )
-                              : view === 'customers'
-                                ? await this.api.customers<PagedReportData<CustomerDirectoryRecord>>(
-                                    storeId,
-                                    page,
-                                    filters,
-                                  )
-                                : view === 'personnel'
-                                  ? await this.api.personnel<PagedReportData<PersonnelDirectoryRecord>>(
-                                      storeId,
-                                      page,
-                                      filters,
-                                    )
-                              : view === 'inventory-forecast'
-                                ? await this.api.inventoryForecast<InventoryForecastData>(
+                              : view === 'customer-insights'
+                                ? await this.api.customerInsights<CustomerInsightsData>(
                                     storeId,
                                     this.from,
                                     this.to,
                                     page,
                                     filters,
                                   )
-                                : view === 'payments'
-                                  ? await this.api.paymentAnalysis<PaymentAnalysisData>(
-                                      storeId,
-                                      this.from,
-                                      this.to,
-                                    )
-                                  : await this.api.report(
-                                      storeId,
-                                      view === 'balances' ? 'customer-balances' : view,
-                                      this.from,
-                                      this.to,
-                                      page,
-                                      filters,
-                                    );
+                                : view === 'customers'
+                                  ? await this.api.customers<
+                                      PagedReportData<CustomerDirectoryRecord>
+                                    >(storeId, page, filters)
+                                  : view === 'personnel'
+                                    ? await this.api.personnel<
+                                        PagedReportData<PersonnelDirectoryRecord>
+                                      >(storeId, page, filters)
+                                    : view === 'inventory-forecast'
+                                      ? await this.api.inventoryForecast<InventoryForecastData>(
+                                          storeId,
+                                          this.from,
+                                          this.to,
+                                          page,
+                                          filters,
+                                        )
+                                      : view === 'payments'
+                                        ? await this.api.paymentAnalysis<PaymentAnalysisData>(
+                                            storeId,
+                                            this.from,
+                                            this.to,
+                                          )
+                                        : await this.api.report(
+                                            storeId,
+                                            view === 'balances' ? 'customer-balances' : view,
+                                            this.from,
+                                            this.to,
+                                            page,
+                                            filters,
+                                          );
       if (requestId !== this.reportRequest) return;
       this.response = response;
       if (view === 'business') {
@@ -1995,13 +2395,14 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     this.customerDirectoryError = '';
     try {
       if (this.customerDirectoryTab === 'sales') {
-        this.customerDirectorySales = await this.api.customerPurchaseHistory<CustomerPurchaseHistoryData>(
-          this.selectedStoreId,
-          customer.id,
-          this.from,
-          this.to,
-          this.customerDirectoryHistoryPage,
-        );
+        this.customerDirectorySales =
+          await this.api.customerPurchaseHistory<CustomerPurchaseHistoryData>(
+            this.selectedStoreId,
+            customer.id,
+            this.from,
+            this.to,
+            this.customerDirectoryHistoryPage,
+          );
       } else {
         this.customerDirectoryLend = await this.api.customerLendHistory<CustomerLendHistoryData>(
           this.selectedStoreId,
@@ -2065,7 +2466,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ? 'customer-balances'
           : this.activeView
         : this.exportTarget;
-    const destination = await this.prepareExportDestination(`${report}-${this.from}-to-${this.to}.${format}`, format);
+    const destination = await this.prepareExportDestination(
+      `${report}-${this.from}-to-${this.to}.${format}`,
+      format,
+    );
     if (destination === undefined) return;
     this.exporting = true;
     let exportSucceeded = false;
@@ -2131,7 +2535,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
           ['Total salary', data.cashFlow.salaryPaid],
           ['Net amount', this.financialNetAmount],
         ];
-        await this.downloadLocalExport(`financial-report-${this.from}-to-${this.to}.csv`, rows, format, destination);
+        await this.downloadLocalExport(
+          `financial-report-${this.from}-to-${this.to}.csv`,
+          rows,
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${data.productRows.length} ${data.productRows.length === 1 ? 'product' : 'products'}.`;
         exportSucceeded = true;
         return;
@@ -2139,21 +2548,26 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'discount-report' && this.discountReport) {
         const data = this.discountReport;
         const items = await this.loadAllPagedModuleItems('discount-report', data);
-        await this.downloadLocalExport(`discount-report-${this.from}-to-${this.to}.csv`, [
-          ['Discount history'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Cashier', 'Regular', 'Special', 'Total'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.cashier,
-            row.regularDiscount,
-            row.specialDiscount,
-            row.totalDiscount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `discount-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Discount history'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Cashier', 'Regular', 'Special', 'Total'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.cashier,
+              row.regularDiscount,
+              row.specialDiscount,
+              row.totalDiscount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -2161,21 +2575,26 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'purchase-report' && this.purchaseReport) {
         const data = this.purchaseReport;
         const items = await this.loadAllPagedModuleItems('purchase-report', data);
-        await this.downloadLocalExport(`purchase-report-${this.from}-to-${this.to}.csv`, [
-          ['Purchase history'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Supplier', 'Driver', 'Type', 'Items', 'Purchase amount'],
-          ...items.map((row) => [
-            row.purchaseDate,
-            row.reference,
-            row.supplier,
-            row.driver,
-            row.purchaseType,
-            row.totalQuantity,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `purchase-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Purchase history'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Supplier', 'Driver', 'Type', 'Items', 'Purchase amount'],
+            ...items.map((row) => [
+              row.purchaseDate,
+              row.reference,
+              row.supplier,
+              row.driver,
+              row.purchaseType,
+              row.totalQuantity,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -2183,22 +2602,27 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'special-receipts' && this.specialReceiptReport) {
         const data = this.specialReceiptReport;
         const items = await this.loadAllPagedModuleItems('special-receipts', data);
-        await this.downloadLocalExport(`special-receipts-${this.from}-to-${this.to}.csv`, [
-          ['Special receipts'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Sale type', 'Items', 'Payment', 'Cashier', 'Total'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.saleType,
-            row.itemCount,
-            row.paymentMethod,
-            row.cashier,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `special-receipts-${this.from}-to-${this.to}.csv`,
+          [
+            ['Special receipts'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Sale type', 'Items', 'Payment', 'Cashier', 'Total'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.saleType,
+              row.itemCount,
+              row.paymentMethod,
+              row.cashier,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
@@ -2206,35 +2630,45 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       if (this.activeView === 'customer-report' && this.customerReport) {
         const data = this.customerReport;
         const items = await this.loadAllPagedModuleItems('customer-report', data);
-        await this.downloadLocalExport(`customer-report-${this.from}-to-${this.to}.csv`, [
-          ['Customer sales'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Date', 'Reference', 'Customer', 'Address', 'GAS', 'Group', 'Items', 'Net sales'],
-          ...items.map((row) => [
-            row.salesDate,
-            row.reference,
-            row.customer,
-            row.address,
-            row.gas,
-            row.groupName,
-            row.itemCount,
-            row.totalAmount,
-          ]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `customer-report-${this.from}-to-${this.to}.csv`,
+          [
+            ['Customer sales'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Date', 'Reference', 'Customer', 'Address', 'GAS', 'Group', 'Items', 'Net sales'],
+            ...items.map((row) => [
+              row.salesDate,
+              row.reference,
+              row.customer,
+              row.address,
+              row.gas,
+              row.groupName,
+              row.itemCount,
+              row.totalAmount,
+            ]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${items.length} ${items.length === 1 ? 'record' : 'records'}.`;
         exportSucceeded = true;
         return;
       }
       if (this.activeView === 'peak-hours' && this.peakHoursReport) {
         const data = this.peakHoursReport;
-        await this.downloadLocalExport(`peak-hours-${this.from}-to-${this.to}.csv`, [
-          ['Peak hours'],
-          [`Date from: ${this.from}`, `Date to: ${this.to}`],
-          [],
-          ['Hour', 'Transactions', 'Gross sales'],
-          ...data.items.map((row) => [row.label, row.transactions, row.grossSales]),
-        ], format, destination);
+        await this.downloadLocalExport(
+          `peak-hours-${this.from}-to-${this.to}.csv`,
+          [
+            ['Peak hours'],
+            [`Date from: ${this.from}`, `Date to: ${this.to}`],
+            [],
+            ['Hour', 'Transactions', 'Gross sales'],
+            ...data.items.map((row) => [row.label, row.transactions, row.grossSales]),
+          ],
+          format,
+          destination,
+        );
         this.exportStatus = `Exported ${data.items.length} ${data.items.length === 1 ? 'hour' : 'hours'}.`;
         exportSucceeded = true;
         return;
@@ -2260,17 +2694,22 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       }.`;
       exportSucceeded = true;
     } catch (error) {
-      this.exportError = this.message(error, `The ${format.toUpperCase()} export could not be created.`);
+      this.exportError = this.message(
+        error,
+        `The ${format.toUpperCase()} export could not be created.`,
+      );
     } finally {
       if (exportSucceeded) {
         this.analytics.feature('REPORT_EXPORTED', this.analyticsRoute(), this.selectedStoreId);
-        void this.api.recordExportActivity({
-          storeId: this.selectedStoreId,
-          report,
-          format,
-          from: this.from,
-          to: this.to,
-        }).catch(() => undefined);
+        void this.api
+          .recordExportActivity({
+            storeId: this.selectedStoreId,
+            report,
+            format,
+            from: this.from,
+            to: this.to,
+          })
+          .catch(() => undefined);
       }
       this.exporting = false;
       this.changeDetector.detectChanges();
@@ -2908,10 +3347,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     try {
       const handle = await pickerWindow.showSaveFilePicker({
         suggestedName: suggestedName.replace(/[\\/:*?"<>|]/g, '-'),
-        types: [{
-          description: `${format.toUpperCase()} file`,
-          accept: { [format === 'pdf' ? 'application/pdf' : 'text/csv']: [`.${format}`] },
-        }],
+        types: [
+          {
+            description: `${format.toUpperCase()} file`,
+            accept: { [format === 'pdf' ? 'application/pdf' : 'text/csv']: [`.${format}`] },
+          },
+        ],
       });
       return async (blob: Blob) => {
         const writable = await handle.createWritable();
@@ -2955,7 +3396,10 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
     const content = `\uFEFF${rows
       .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
       .join('\r\n')}`;
-    await this.downloadCsv({ fileName, content, rowCount: Math.max(0, rows.length - 1) }, destination);
+    await this.downloadCsv(
+      { fileName, content, rowCount: Math.max(0, rows.length - 1) },
+      destination,
+    );
   }
 
   private async downloadRowsPdf(
@@ -2972,7 +3416,11 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       import('jspdf'),
       import('jspdf-autotable'),
     ]);
-    const pdf = new jsPDF({ orientation: width > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+    const pdf = new jsPDF({
+      orientation: width > 5 ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
     const title = String(rows[0]?.[0] || 'Report export');
     pdf.setProperties({ title, creator: 'POS V2 Owner Dashboard' });
     pdf.setFont('helvetica', 'bold');
@@ -2987,7 +3435,12 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
       startY: 62,
       margin: { left: 28, right: 28, bottom: 28 },
       theme: 'grid',
-      styles: { font: 'helvetica', fontSize: width > 5 ? 6.5 : 7.5, cellPadding: 4, overflow: 'linebreak' },
+      styles: {
+        font: 'helvetica',
+        fontSize: width > 5 ? 6.5 : 7.5,
+        cellPadding: 4,
+        overflow: 'linebreak',
+      },
       alternateRowStyles: { fillColor: [247, 249, 248] },
     });
     const blob = pdf.output('blob');
@@ -3202,7 +3655,8 @@ export class OwnerDashboardComponent implements OnInit, OnDestroy {
   private reportFilters(): ReportFilters {
     return {
       search: this.search,
-      status: this.activeView === 'sales' || this.activeView === 'customers' ? this.salesStatus : '',
+      status:
+        this.activeView === 'sales' || this.activeView === 'customers' ? this.salesStatus : '',
       payment: this.activeView === 'sales' ? this.salesPayment : '',
       itemCode: this.activeView === 'sales' ? this.salesItemCode : '',
       category: this.activeView === 'inventory' ? this.inventoryCategory : '',

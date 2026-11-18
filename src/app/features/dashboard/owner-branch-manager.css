@@ -615,3 +615,787 @@ app-owner-dashboard .branch-manager-footer > span {
     width: 100%;
   }
 }
+
+/* Desktop-style management workspaces */
+app-owner-dashboard .branch-manager-dialog,
+app-owner-dashboard .branch-manager-dialog--people,
+app-owner-dashboard .branch-manager-dialog--master {
+  width: min(1180px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+}
+
+app-owner-dashboard .branch-manager-header {
+  align-items: center;
+}
+
+app-owner-dashboard .branch-manager-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+app-owner-dashboard .branch-manager-header-actions .branch-primary-button {
+  align-self: auto;
+}
+
+app-owner-dashboard .branch-icon-button {
+  display: grid;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+  padding: 0;
+}
+
+app-owner-dashboard .branch-icon-button:hover:not(:disabled) {
+  border-color: #c8ae7a;
+  background: #fffaf0;
+  color: var(--ink-strong);
+}
+
+app-owner-dashboard .branch-icon-button svg,
+app-owner-dashboard .branch-primary-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+app-owner-dashboard .branch-manager-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 18px 24px 0;
+}
+
+app-owner-dashboard .branch-manager-toolbar > span {
+  flex: 0 0 auto;
+  padding-bottom: 11px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+app-owner-dashboard .branch-search-control {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 6px;
+  color: #685f50;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-owner-dashboard .branch-search-control i {
+  display: grid;
+  height: 40px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid #d5c6ae;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  font-style: normal;
+}
+
+app-owner-dashboard .branch-search-control i:focus-within {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgb(215 155 36 / 12%);
+}
+
+app-owner-dashboard .branch-search-control svg {
+  justify-self: center;
+  width: 15px;
+  height: 15px;
+  color: var(--ink-muted);
+}
+
+app-owner-dashboard .branch-search-control input {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  outline: 0;
+  padding: 0 12px 0 0;
+  font: inherit;
+  font-size: 12px;
+  text-transform: none;
+}
+
+app-owner-dashboard .branch-data-table {
+  min-height: 210px;
+  margin: 10px 24px 0;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--surface-raised);
+}
+
+app-owner-dashboard .branch-data-head,
+app-owner-dashboard .branch-data-row {
+  display: grid;
+  min-width: 820px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+}
+
+app-owner-dashboard .branch-data-head {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  min-height: 40px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #fbf7ef;
+  color: #776e60;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-owner-dashboard .branch-data-row {
+  min-height: 58px;
+  border-bottom: 1px solid var(--line-soft);
+  color: #5d5245;
+  font-size: 11px;
+}
+
+app-owner-dashboard .branch-data-row:last-of-type {
+  border-bottom: 0;
+}
+
+app-owner-dashboard .branch-data-row:hover {
+  background: #fffaf0;
+}
+
+app-owner-dashboard .branch-data-row.pending-row {
+  background: #fff9eb;
+}
+
+app-owner-dashboard .branch-data-row > span,
+app-owner-dashboard .branch-data-row > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+app-owner-dashboard .branch-data-row > span:not(.branch-row-actions) {
+  display: grid;
+  gap: 3px;
+}
+
+app-owner-dashboard .branch-data-row strong {
+  color: var(--ink-strong);
+  font-size: 12px;
+}
+
+app-owner-dashboard .branch-data-row small {
+  display: block;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+app-owner-dashboard .branch-data-row code {
+  color: #5d5245;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
+app-owner-dashboard .branch-data-table--branches .branch-data-head,
+app-owner-dashboard .branch-data-table--branches .branch-data-row {
+  grid-template-columns: minmax(220px, 1.4fr) 140px minmax(180px, 1fr) 150px;
+}
+
+app-owner-dashboard .branch-data-table--people .branch-data-head,
+app-owner-dashboard .branch-data-table--people .branch-data-row {
+  grid-template-columns: minmax(230px, 1.4fr) 110px minmax(180px, 1fr) 110px 130px;
+}
+
+app-owner-dashboard .branch-data-table--master .branch-data-head,
+app-owner-dashboard .branch-data-table--master .branch-data-row,
+app-owner-dashboard .branch-data-table--releases .branch-data-head,
+app-owner-dashboard .branch-data-table--releases .branch-data-row {
+  grid-template-columns: minmax(180px, 1.1fr) 150px minmax(220px, 1.5fr) 120px 155px;
+}
+
+app-owner-dashboard .branch-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+app-owner-dashboard .branch-row-actions button {
+  min-height: 30px;
+  border: 1px solid #d5c6ae;
+  border-radius: 5px;
+  background: var(--surface-raised);
+  padding: 0 9px;
+  color: #4b4033;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+app-owner-dashboard .branch-row-actions button:hover:not(:disabled) {
+  border-color: #b99b64;
+  background: #fff9ee;
+}
+
+app-owner-dashboard .branch-row-actions button.danger {
+  color: #a74637;
+}
+
+app-owner-dashboard .branch-row-actions button.danger:hover:not(:disabled) {
+  border-color: #d8a9a0;
+  background: #fff2ef;
+}
+
+app-owner-dashboard .branch-editor-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background: rgb(27 22 15 / 68%);
+  padding: 20px;
+}
+
+app-owner-dashboard .branch-editor-dialog {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  border: 1px solid #d8c9b1;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 24px 72px rgb(25 20 13 / 28%);
+}
+
+app-owner-dashboard .branch-editor-dialog--people,
+app-owner-dashboard .branch-editor-dialog--master {
+  width: min(760px, 100%);
+}
+
+app-owner-dashboard .branch-editor-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 20px 22px 16px;
+}
+
+app-owner-dashboard .branch-editor-dialog > header h2 {
+  margin: 4px 0 0;
+  color: var(--ink-strong);
+  font-size: 20px;
+}
+
+app-owner-dashboard .branch-editor-dialog > header span {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+app-owner-dashboard .branch-editor-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+app-owner-dashboard .branch-editor-form label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #5d5245;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+app-owner-dashboard .branch-editor-form label.wide,
+app-owner-dashboard .branch-editor-form .wide {
+  grid-column: 1 / -1;
+}
+
+app-owner-dashboard .branch-editor-form label > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+app-owner-dashboard .branch-editor-form label b {
+  color: #a74637;
+}
+
+app-owner-dashboard .branch-editor-form label small {
+  color: var(--ink-muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+app-owner-dashboard .branch-editor-form input,
+app-owner-dashboard .branch-editor-form select,
+app-owner-dashboard .branch-editor-form textarea,
+app-owner-dashboard .master-publish-controls input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d5c6ae;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  outline: 0;
+  font: inherit;
+  font-size: 12px;
+}
+
+app-owner-dashboard .branch-editor-form input,
+app-owner-dashboard .branch-editor-form select,
+app-owner-dashboard .master-publish-controls input {
+  height: 40px;
+  padding: 0 11px;
+}
+
+app-owner-dashboard .branch-editor-form textarea {
+  min-height: 76px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+app-owner-dashboard .branch-editor-form input:focus,
+app-owner-dashboard .branch-editor-form select:focus,
+app-owner-dashboard .branch-editor-form textarea:focus,
+app-owner-dashboard .master-publish-controls input:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgb(215 155 36 / 12%);
+}
+
+app-owner-dashboard .branch-editor-dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--line-soft);
+  padding: 14px 22px;
+}
+
+app-owner-dashboard .branch-access-fieldset {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 38px 12px 12px;
+}
+
+app-owner-dashboard .branch-access-fieldset legend {
+  position: absolute;
+  top: 11px;
+  left: 12px;
+  color: #5d5245;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+app-owner-dashboard .branch-access-fieldset legend small {
+  margin-left: 6px;
+}
+
+app-owner-dashboard .branch-access-fieldset .branch-manager-inline-actions {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+}
+
+app-owner-dashboard .branch-access-fieldset > label {
+  display: flex;
+  min-height: 46px;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+app-owner-dashboard .branch-access-fieldset input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  accent-color: var(--accent-strong);
+}
+
+app-owner-dashboard .branch-access-fieldset label span {
+  display: grid;
+  gap: 2px;
+}
+
+app-owner-dashboard .invitation-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 22px 18px;
+  border: 1px solid #bed7c4;
+  border-radius: 7px;
+  background: #edf7ef;
+  padding: 12px;
+}
+
+app-owner-dashboard .invitation-result > div {
+  display: grid;
+  gap: 4px;
+}
+
+app-owner-dashboard .invitation-result strong {
+  color: #2c633c;
+  font-size: 11px;
+}
+
+app-owner-dashboard .invitation-result span {
+  color: #4b6f55;
+  font-size: 10px;
+}
+
+app-owner-dashboard .invitation-result code {
+  overflow-wrap: anywhere;
+  color: #274f33;
+  font-size: 10px;
+}
+
+app-owner-dashboard .master-data-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 24px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-soft);
+  scrollbar-width: thin;
+}
+
+app-owner-dashboard .master-data-tabs button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 0 11px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+app-owner-dashboard .master-data-tabs button:hover,
+app-owner-dashboard .master-data-tabs button.active {
+  color: var(--ink-strong);
+}
+
+app-owner-dashboard .master-data-tabs button.active {
+  border-bottom-color: var(--accent-strong);
+}
+
+app-owner-dashboard .master-draft-tray {
+  margin: 14px 24px 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: #fbf7ef;
+}
+
+app-owner-dashboard .master-draft-tray.has-changes {
+  border-color: #dec58f;
+}
+
+app-owner-dashboard .master-draft-tray > header,
+app-owner-dashboard .master-publish-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+}
+
+app-owner-dashboard .master-draft-tray > header > div,
+app-owner-dashboard .master-draft-list article > span {
+  display: grid;
+  gap: 3px;
+}
+
+app-owner-dashboard .master-draft-tray header strong,
+app-owner-dashboard .master-draft-list strong {
+  color: var(--ink-strong);
+  font-size: 11px;
+}
+
+app-owner-dashboard .master-draft-tray header span,
+app-owner-dashboard .master-draft-list small {
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+app-owner-dashboard .master-draft-tray header > i {
+  color: #80590b;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-owner-dashboard .master-draft-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  border-top: 1px solid var(--line-soft);
+  padding: 10px 14px;
+}
+
+app-owner-dashboard .master-draft-list article {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  padding: 8px 9px;
+}
+
+app-owner-dashboard .master-draft-list article button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-muted);
+  padding: 0;
+}
+
+app-owner-dashboard .master-draft-list article button:hover {
+  background: #fff2ef;
+  color: #a74637;
+}
+
+app-owner-dashboard .master-draft-list svg {
+  width: 13px;
+  height: 13px;
+}
+
+app-owner-dashboard .master-publish-controls {
+  align-items: end;
+  border-top: 1px solid var(--line-soft);
+}
+
+app-owner-dashboard .master-publish-controls label {
+  display: grid;
+  width: min(560px, 100%);
+  gap: 6px;
+  color: #5d5245;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-owner-dashboard .money-input {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid #d5c6ae;
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+
+app-owner-dashboard .money-input:focus-within {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgb(215 155 36 / 12%);
+}
+
+app-owner-dashboard .money-input b {
+  justify-self: center;
+  color: var(--ink-muted);
+}
+
+app-owner-dashboard .money-input input {
+  border: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  app-owner-dashboard .branch-manager-dialog,
+  app-owner-dashboard .branch-manager-dialog--people,
+  app-owner-dashboard .branch-manager-dialog--master {
+    max-height: calc(100dvh - 16px);
+  }
+
+  app-owner-dashboard .branch-manager-header {
+    align-items: flex-start;
+  }
+
+  app-owner-dashboard .branch-manager-header-actions {
+    align-items: stretch;
+  }
+
+  app-owner-dashboard .branch-manager-header-actions .branch-primary-button {
+    width: auto;
+  }
+
+  app-owner-dashboard .branch-manager-header-actions .branch-primary-button {
+    overflow: hidden;
+    max-width: 150px;
+    text-overflow: ellipsis;
+  }
+
+  app-owner-dashboard .branch-manager-toolbar,
+  app-owner-dashboard .branch-data-table,
+  app-owner-dashboard .master-data-tabs,
+  app-owner-dashboard .master-draft-tray {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  app-owner-dashboard .branch-manager-toolbar {
+    align-items: end;
+  }
+
+  app-owner-dashboard .branch-data-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  app-owner-dashboard .branch-data-head {
+    display: none;
+  }
+
+  app-owner-dashboard .branch-data-row,
+  app-owner-dashboard .branch-data-table--branches .branch-data-row,
+  app-owner-dashboard .branch-data-table--people .branch-data-row,
+  app-owner-dashboard .branch-data-table--master .branch-data-row,
+  app-owner-dashboard .branch-data-table--releases .branch-data-row {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: var(--surface-raised);
+    padding: 12px;
+  }
+
+  app-owner-dashboard .branch-data-row > [data-label]::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #8c8370;
+    content: attr(data-label);
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  app-owner-dashboard .branch-data-row > [data-label='Name'],
+  app-owner-dashboard .branch-data-row > [data-label='User'],
+  app-owner-dashboard .branch-data-row > [data-label='Details'],
+  app-owner-dashboard .branch-data-row > [data-label='Actions'] {
+    grid-column: 1 / -1;
+  }
+
+  app-owner-dashboard .master-draft-list {
+    grid-template-columns: 1fr;
+  }
+
+  app-owner-dashboard .master-publish-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  app-owner-dashboard .master-publish-controls .branch-primary-button {
+    width: 100%;
+  }
+
+  app-owner-dashboard .branch-editor-backdrop {
+    place-items: end center;
+    padding: 8px;
+  }
+
+  app-owner-dashboard .branch-editor-dialog,
+  app-owner-dashboard .branch-editor-dialog--people,
+  app-owner-dashboard .branch-editor-dialog--master {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+  }
+
+  app-owner-dashboard .branch-editor-form {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  app-owner-dashboard .branch-editor-form label.wide,
+  app-owner-dashboard .branch-editor-form .wide {
+    grid-column: auto;
+  }
+
+  app-owner-dashboard .branch-access-fieldset {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 440px) {
+  app-owner-dashboard .branch-manager-header-actions .branch-primary-button {
+    width: 64px;
+    max-width: 64px;
+    padding: 0 10px;
+    color: #241b10;
+    font-size: 0;
+    gap: 5px;
+  }
+
+  app-owner-dashboard .branch-manager-header-actions .branch-primary-button::after {
+    content: 'Add';
+    font-size: 11px;
+  }
+
+  app-owner-dashboard .branch-manager-header-actions .branch-primary-button svg {
+    color: #241b10;
+  }
+
+  app-owner-dashboard .branch-manager-toolbar {
+    display: grid;
+    gap: 4px;
+  }
+
+  app-owner-dashboard .branch-manager-toolbar > span {
+    padding-bottom: 0;
+  }
+
+  app-owner-dashboard .branch-data-row,
+  app-owner-dashboard .branch-data-table--branches .branch-data-row,
+  app-owner-dashboard .branch-data-table--people .branch-data-row,
+  app-owner-dashboard .branch-data-table--master .branch-data-row,
+  app-owner-dashboard .branch-data-table--releases .branch-data-row {
+    grid-template-columns: 1fr;
+  }
+
+  app-owner-dashboard .branch-data-row > [data-label] {
+    grid-column: auto;
+  }
+
+  app-owner-dashboard .branch-editor-dialog > footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  app-owner-dashboard .invitation-result {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
